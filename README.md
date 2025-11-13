@@ -63,4 +63,3 @@ Open [http://localhost:9002](http://localhost:9002) with your browser to see the
     - Reorder pages within the target pane by dragging and dropping them.
     - Delete a page by hovering over it and clicking the trash icon.
 3.  **Download**: Once you are happy with the composition, click the "Download" button to generate and save your new PDF.
-
