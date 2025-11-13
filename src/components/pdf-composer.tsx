@@ -468,7 +468,7 @@ export function PdfComposer() {
         <Card className="flex flex-col">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Source Documents</CardTitle>
+              <CardTitle>Source PDF Documents</CardTitle>
               </div>
               <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
@@ -531,7 +531,7 @@ export function PdfComposer() {
         <Card className="flex flex-col">
           <CardHeader>
              <div className="flex items-center justify-between">
-                <CardTitle>New Target Document</CardTitle>
+                <CardTitle>Target PDF Document (New)</CardTitle>
                 </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">

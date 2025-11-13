@@ -10,10 +10,10 @@ export default function Home() {
             <h1 className="font-headline text-3xl font-extrabold tracking-tight text-primary sm:text-4xl lg:text-5xl">
               PDF Composer
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground">
-              Visually split, reorder, and merge PDF pages with a simple
-              drag-and-drop interface. All processing is done securely in your
-              browser.
+            <p className="mx-auto mt-2 max-w-xl text-base text-muted-foreground">
+              Load, reorder, drag-and-drop and compose visually your new PDF document. 
+              All processing is done securely in your own browser.
+              No leak, no fees.
             </p>
           </header>
           <PdfComposer />
