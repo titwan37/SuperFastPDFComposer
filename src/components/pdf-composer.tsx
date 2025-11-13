@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
@@ -325,52 +326,52 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-
+  
     if (!over) return;
-
+  
     const activeIdStr = active.id as UniqueId;
     const overIdStr = over.id as UniqueId;
-
-    const isActiveFromTarget = active.data.current?.from === 'target';
-    const isOverTargetContainer = over.id === 'target-droppable-area';
-    const isOverTargetItem = over.data.current?.from === 'target';
-
+  
+    const activeIsTarget = active.data.current?.from === 'target';
+    const overIsTarget = over.data.current?.from === 'target';
+  
     // Scenario 1: Reordering within the target pane
-    if (isActiveFromTarget && isOverTargetItem) {
-        if (activeIdStr === overIdStr) return;
-
+    if (activeIsTarget && overIsTarget) {
+      if (activeIdStr !== overIdStr) {
         setTargetPages((pages) => {
-            const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
-            const newIndex = pages.findIndex((p) => p.id === overIdStr);
-            if (oldIndex === -1 || newIndex === -1) return pages;
-            return arrayMove(pages, oldIndex, newIndex);
+          const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
+          const newIndex = pages.findIndex((p) => p.id === overIdStr);
+          return arrayMove(pages, oldIndex, newIndex);
         });
-        return;
+      }
+      return;
     }
-
-    const isActiveFromSource = active.data.current?.from === 'source';
-    
+  
+    const activeIsSource = active.data.current?.from === 'source';
+    const overIsTargetArea = over.id === 'target-droppable-area';
+  
     // Scenario 2: Dropping from source into target pane
-    if (isActiveFromSource && (isOverTargetContainer || isOverTargetItem)) {
-        const { docId, pageIndex } = active.data.current!;
-        const newPage: TargetPage = {
-            id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
-            docId: docId,
-            originalPageIndex: pageIndex,
-        };
-
-        setTargetPages((pages) => {
-            if (isOverTargetItem) {
-                const overIndex = pages.findIndex((p) => p.id === overIdStr);
-                if (overIndex !== -1) {
-                    const newPages = [...pages];
-                    newPages.splice(overIndex + 1, 0, newPage);
-                    return newPages;
-                }
-            }
-            // If dropping on container or item not found, add to the end
-            return [...pages, newPage];
-        });
+    if (activeIsSource && (overIsTarget || overIsTargetArea)) {
+      const { docId, pageIndex } = active.data.current!;
+      const newPage: TargetPage = {
+        id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
+        docId: docId,
+        originalPageIndex: pageIndex,
+      };
+  
+      setTargetPages((pages) => {
+        if (overIsTarget) {
+          // Dropping on an existing item in the target
+          const overIndex = pages.findIndex((p) => p.id === overIdStr);
+          if (overIndex !== -1) {
+            const newPages = [...pages];
+            newPages.splice(overIndex + 1, 0, newPage); // Insert after the item
+            return newPages;
+          }
+        }
+        // Dropping on the container or an item not found, add to the end
+        return [...pages, newPage];
+      });
     }
   };
 
@@ -427,9 +428,13 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
 
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
-      openTipsDialog();
-    } else {
       proceedToDownload();
+    } else {
+       toast({
+        variant: "destructive",
+        title: "Empty Document",
+        description: "Add some pages to the target document before downloading.",
+      });
     }
   };
 
@@ -482,7 +487,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
         <Card className="flex flex-col">
           <CardHeader>
              <div>
-                <CardTitle>Source PDF Documents</CardTitle>
+                <CardTitle>Source Documents</CardTitle>
             </div>
             <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
@@ -545,7 +550,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
         <Card className="flex flex-col">
           <CardHeader>
              <div>
-                <CardTitle>Target PDF Document (New)</CardTitle>
+                <CardTitle>New Document</CardTitle>
             </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
@@ -574,7 +579,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
               </div>
           </CardHeader>
           <CardContent className="flex-grow">
-            <SortableContext items={targetPages} strategy={rectSortingStrategy}>
+            <SortableContext items={targetPages.map(p => p.id)} strategy={rectSortingStrategy}>
               <ScrollArea className="h-[60vh] rounded-md border">
                 <div ref={setDroppableNodeRef} className="h-full p-4">
                   {targetPages.length > 0 ? (
@@ -591,7 +596,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
                     </div>
                   ) : (
                     <div className={cn(
-                      "flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
+                      "flex h-full min-h-[10rem] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
                       isOver ? "border-primary bg-accent/10" : ""
                     )}>
                       <p className="font-semibold">Drag pages here</p>
@@ -619,3 +624,5 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     </DndContext>
   );
 }
+
+    
