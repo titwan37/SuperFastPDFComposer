@@ -469,6 +469,8 @@ export function PdfComposer() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Source Documents</CardTitle>
+              </div>
+              <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
                 <Plus className="mr-2 h-4 w-4" /> Add PDF
               </Button>
@@ -529,13 +531,15 @@ export function PdfComposer() {
         <Card className="flex flex-col">
           <CardHeader>
              <div className="flex items-center justify-between">
-                <CardTitle>New Document</CardTitle>
+                <CardTitle>New Target Document</CardTitle>
+                </div>
+              <div className="flex items-center justify-between">
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Clear
-                  </Button>
                   <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
                     <Upload className="mr-2 h-4 w-4" /> Load Base
+                  </Button>
+                  <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear
                   </Button>
                   <input
                     type="file"
