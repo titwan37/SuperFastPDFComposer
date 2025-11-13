@@ -12,4 +12,5 @@ export type SourceDoc = {
   id: string; // Unique ID for the document
   doc: PDFDocument;
   filename: string;
+  thumbnailUrls: (string | undefined | null)[]; // Array of data URLs for page thumbnails
 };

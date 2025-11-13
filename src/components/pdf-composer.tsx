@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
+import * as pdfjs from "pdfjs-dist";
 import {
   Upload,
   Download,
@@ -37,15 +38,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { SourceDoc, TargetPage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// pdf.js worker configuration
+if (typeof window !== "undefined") {
+  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+}
 
 type UniqueId = string;
 
 // Sub-component for a single page thumbnail
 function PageThumbnail({
   pageNumber,
+  thumbnailUrl,
   isOverlay = false,
 }: {
   pageNumber: number | string;
+  thumbnailUrl?: string | null;
   isOverlay?: boolean;
 }) {
   return (
@@ -57,10 +66,22 @@ function PageThumbnail({
           : "border-border group-hover:border-primary/50 group-hover:shadow-md"
       )}
     >
-      <FileText className="h-8 w-8 text-muted-foreground" />
-      <span className="mt-2 text-sm font-medium text-foreground">
-        Page {pageNumber}
-      </span>
+      {thumbnailUrl ? (
+        <img
+          src={thumbnailUrl}
+          alt={`Page ${pageNumber}`}
+          className="h-full w-full rounded-md object-cover"
+        />
+      ) : thumbnailUrl === null ? (
+        <>
+          <FileText className="h-8 w-8 text-muted-foreground" />
+          <span className="mt-2 text-sm font-medium text-foreground">
+            Page {pageNumber}
+          </span>
+        </>
+      ) : (
+        <Skeleton className="h-full w-full" />
+      )}
     </div>
   );
 }
@@ -69,9 +90,11 @@ function PageThumbnail({
 function DraggableSourcePage({
   docId,
   pageIndex,
+  thumbnailUrl,
 }: {
   docId: UniqueId;
   pageIndex: number;
+  thumbnailUrl?: string | null;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `source-${docId}-${pageIndex}`,
@@ -79,7 +102,10 @@ function DraggableSourcePage({
 
   return (
     <div ref={setNodeRef} {...listeners} {...attributes} className="group cursor-grab touch-none">
-      <PageThumbnail pageNumber={pageIndex + 1} />
+      <PageThumbnail
+        pageNumber={pageIndex + 1}
+        thumbnailUrl={thumbnailUrl}
+      />
     </div>
   );
 }
@@ -88,10 +114,12 @@ function DraggableSourcePage({
 function SortableTargetPage({
   id,
   pageNumber,
+  thumbnailUrl,
   onDelete,
 }: {
   id: UniqueId;
   pageNumber: number;
+  thumbnailUrl?: string | null;
   onDelete: (id: UniqueId) => void;
 }) {
   const {
@@ -116,7 +144,7 @@ function SortableTargetPage({
       className="group relative"
     >
       <div className="relative">
-        <PageThumbnail pageNumber={pageNumber} />
+        <PageThumbnail pageNumber={pageNumber} thumbnailUrl={thumbnailUrl} />
         <div
           {...attributes}
           {...listeners}
@@ -156,6 +184,30 @@ export function PdfComposer() {
     })
   );
 
+  const renderPdfPage = async (
+    pdfDoc: pdfjs.PDFDocumentProxy,
+    pageNumber: number
+  ): Promise<string> => {
+    const page = await pdfDoc.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 0.5 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    if (!context) {
+      throw new Error("Could not get canvas context");
+    }
+
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport,
+    };
+
+    await page.render(renderContext).promise;
+    return canvas.toDataURL();
+  };
+
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
     pane: "source" | "target"
@@ -176,13 +228,38 @@ export function PdfComposer() {
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const docId = `${Date.now()}-${Math.random()}`;
 
+      // For rendering thumbnails
+      const pdfjsDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      const pageCount = pdfjsDoc.numPages;
+
       const newSourceDoc: SourceDoc = {
         id: docId,
         doc: pdfDoc,
         filename: file.name,
+        thumbnailUrls: Array(pageCount).fill(undefined),
       };
 
       setSourceDocs((prev) => ({ ...prev, [docId]: newSourceDoc }));
+
+      // Sequentially render thumbnails to avoid overwhelming the browser
+      for (let i = 0; i < pageCount; i++) {
+        try {
+          const thumbnailUrl = await renderPdfPage(pdfjsDoc, i + 1);
+          setSourceDocs((prev) => {
+            const updatedDoc = { ...prev[docId] };
+            updatedDoc.thumbnailUrls[i] = thumbnailUrl;
+            return { ...prev, [docId]: updatedDoc };
+          });
+        } catch (renderError) {
+          console.error(`Failed to render page ${i + 1}:`, renderError);
+          // Set to null to indicate failure, so we can show a placeholder
+           setSourceDocs((prev) => {
+            const updatedDoc = { ...prev[docId] };
+            updatedDoc.thumbnailUrls[i] = null;
+            return { ...prev, [docId]: updatedDoc };
+          });
+        }
+      }
 
       if (pane === "target") {
         const newTargetPages = Array.from({ length: pdfDoc.getPageCount() }).map(
@@ -207,7 +284,6 @@ export function PdfComposer() {
       });
     } finally {
       setIsLoading(false);
-      // Reset file input
       if (event.target) {
         event.target.value = "";
       }
@@ -347,19 +423,35 @@ export function PdfComposer() {
     id: 'target-droppable-area',
   });
 
-  const getActivePageNumber = useCallback(() => {
-    if (!activeId) return '';
+  const getActivePageData = useCallback(() => {
+    if (!activeId) return { pageNumber: '', thumbnailUrl: undefined };
+
+    let page, pageIndex;
+
     if (activeId.startsWith('source-')) {
-      const [, , pageIndex] = activeId.split('-');
-      return parseInt(pageIndex, 10) + 1;
+        const [, docId, pageIndexStr] = activeId.split('-');
+        pageIndex = parseInt(pageIndexStr, 10);
+        const sourceDoc = sourceDocs[docId];
+        return {
+            pageNumber: pageIndex + 1,
+            thumbnailUrl: sourceDoc?.thumbnailUrls?.[pageIndex]
+        };
     }
+
     if (activeId.startsWith('target-')) {
-      const page = targetPages.find(p => p.id === activeId);
-      const pageIndex = targetPages.indexOf(page!);
-      return pageIndex + 1;
+        const targetPage = targetPages.find(p => p.id === activeId);
+        if (!targetPage) return { pageNumber: '', thumbnailUrl: undefined };
+
+        const pageIdxInTarget = targetPages.indexOf(targetPage);
+        const sourceDoc = sourceDocs[targetPage.docId];
+        return {
+            pageNumber: pageIdxInTarget + 1,
+            thumbnailUrl: sourceDoc?.thumbnailUrls?.[targetPage.originalPageIndex]
+        };
     }
-    return '';
-  }, [activeId, targetPages]);
+    
+    return { pageNumber: '', thumbnailUrl: undefined };
+}, [activeId, sourceDocs, targetPages]);
 
   return (
     <DndContext
@@ -389,13 +481,18 @@ export function PdfComposer() {
             <ScrollArea className="h-[60vh] rounded-md border p-4">
               <div className="space-y-6">
                 {Object.keys(sourceDocs).length > 0 ? (
-                  Object.values(sourceDocs).map(({ id, doc, filename }) => (
+                  Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                     <div key={id}>
                       <h3 className="mb-2 font-semibold text-foreground">{filename}</h3>
                       <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
                         {Array.from({ length: doc.getPageCount() }).map(
                           (_, i) => (
-                            <DraggableSourcePage key={`${id}-${i}`} docId={id} pageIndex={i} />
+                            <DraggableSourcePage 
+                              key={`${id}-${i}`} 
+                              docId={id} 
+                              pageIndex={i}
+                              thumbnailUrl={thumbnailUrls?.[i]}
+                            />
                           )
                         )}
                       </div>
@@ -448,6 +545,7 @@ export function PdfComposer() {
                         key={page.id}
                         id={page.id}
                         pageNumber={index + 1}
+                        thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
                         onDelete={deleteTargetPage}
                       />
                     ))}
@@ -470,7 +568,11 @@ export function PdfComposer() {
       <DragOverlay>
         {activeId ? (
           <div className="w-32">
-            <PageThumbnail pageNumber={getActivePageNumber()} isOverlay />
+             <PageThumbnail 
+                pageNumber={getActivePageData().pageNumber}
+                thumbnailUrl={getActivePageData().thumbnailUrl}
+                isOverlay 
+              />
           </div>
         ) : null}
       </DragOverlay>
