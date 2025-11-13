@@ -22,7 +22,6 @@ export function TipsDialog({
     onConfirm();
     onClose();
   }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -39,7 +38,7 @@ export function TipsDialog({
           <p className="text-sm text-muted-foreground">Scan the QR code with your PayPal app.</p>
           <div className="rounded-lg border p-2">
             <Image
-              src="https://picsum.photos/seed/paypal-qr/200/200"
+              src="/paypal-qr.png"
               alt="PayPal QR Code for tips"
               data-ai-hint="qr code"
               width={200}
