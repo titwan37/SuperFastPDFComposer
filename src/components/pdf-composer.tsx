@@ -324,51 +324,52 @@ export function PdfComposer() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-  
+
     if (!over) return;
-  
+
     const activeIdStr = active.id as UniqueId;
     const overIdStr = over.id as UniqueId;
-    
+
     const isActiveFromTarget = active.data.current?.from === 'target';
-    const isOverTarget = over.data.current?.from === 'target';
+    const isOverTargetContainer = over.id === 'target-droppable-area';
+    const isOverTargetItem = over.data.current?.from === 'target';
 
     // Scenario 1: Reordering within the target pane
-    if (isActiveFromTarget && isOverTarget) {
-      if (activeIdStr === overIdStr) return;
-  
-      setTargetPages((pages) => {
-        const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
-        const newIndex = pages.findIndex((p) => p.id === overIdStr);
-        if (oldIndex === -1 || newIndex === -1) return pages;
-        return arrayMove(pages, oldIndex, newIndex);
-      });
-      return;
+    if (isActiveFromTarget && isOverTargetItem) {
+        if (activeIdStr === overIdStr) return;
+
+        setTargetPages((pages) => {
+            const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
+            const newIndex = pages.findIndex((p) => p.id === overIdStr);
+            if (oldIndex === -1 || newIndex === -1) return pages;
+            return arrayMove(pages, oldIndex, newIndex);
+        });
+        return;
     }
-    
+
     const isActiveFromSource = active.data.current?.from === 'source';
-    const isOverDroppableArea = over.id === 'target-droppable-area';
-
+    
     // Scenario 2: Dropping from source into target pane
-    if (isActiveFromSource && (isOverTarget || isOverDroppableArea)) {
-      const { docId, pageIndex } = active.data.current!;
-      const newPage: TargetPage = {
-        id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
-        docId: docId,
-        originalPageIndex: pageIndex,
-      };
+    if (isActiveFromSource && (isOverTargetContainer || isOverTargetItem)) {
+        const { docId, pageIndex } = active.data.current!;
+        const newPage: TargetPage = {
+            id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
+            docId: docId,
+            originalPageIndex: pageIndex,
+        };
 
-      setTargetPages((pages) => {
-        const overIndex = pages.findIndex((p) => p.id === overIdStr);
-        if (overIndex !== -1) {
-          // Insert after the item we dropped on
-          const newPages = [...pages];
-          newPages.splice(overIndex + 1, 0, newPage);
-          return newPages;
-        }
-        // Otherwise, add to the end
-        return [...pages, newPage];
-      });
+        setTargetPages((pages) => {
+            if (isOverTargetItem) {
+                const overIndex = pages.findIndex((p) => p.id === overIdStr);
+                if (overIndex !== -1) {
+                    const newPages = [...pages];
+                    newPages.splice(overIndex + 1, 0, newPage);
+                    return newPages;
+                }
+            }
+            // If dropping on container or item not found, add to the end
+            return [...pages, newPage];
+        });
     }
   };
 
@@ -465,11 +466,13 @@ export function PdfComposer() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Source Pane */}
         <Card className="flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Source Documents</CardTitle>
-            <Button onClick={() => sourceFileInputRef.current?.click()}>
-              <Plus className="mr-2 h-4 w-4" /> Add PDF
-            </Button>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Source Documents</CardTitle>
+              <Button onClick={() => sourceFileInputRef.current?.click()}>
+                <Plus className="mr-2 h-4 w-4" /> Add PDF
+              </Button>
+            </div>
             <input
               type="file"
               ref={sourceFileInputRef}
@@ -524,31 +527,33 @@ export function PdfComposer() {
 
         {/* Target Pane */}
         <Card className="flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>New Document</CardTitle>
-            <div className="flex gap-2">
-               <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
-                <Trash2 className="mr-2 h-4 w-4" /> Clear
-              </Button>
-              <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Load Base
-              </Button>
-              <input
-                type="file"
-                ref={targetFileInputRef}
-                onChange={(e) => handleFileUpload(e, "target")}
-                className="hidden"
-                accept="application/pdf"
-              />
-              <Button onClick={handleDownload} disabled={isLoading || targetPages.length === 0}>
-                {isLoading ? (
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Download
-              </Button>
-            </div>
+          <CardHeader>
+             <div className="flex items-center justify-between">
+                <CardTitle>New Document</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear
+                  </Button>
+                  <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" /> Load Base
+                  </Button>
+                  <input
+                    type="file"
+                    ref={targetFileInputRef}
+                    onChange={(e) => handleFileUpload(e, "target")}
+                    className="hidden"
+                    accept="application/pdf"
+                  />
+                  <Button onClick={handleDownload} disabled={isLoading || targetPages.length === 0}>
+                    {isLoading ? (
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Download
+                  </Button>
+                </div>
+              </div>
           </CardHeader>
           <CardContent className="flex-grow">
             <SortableContext items={targetPages} strategy={rectSortingStrategy}>
