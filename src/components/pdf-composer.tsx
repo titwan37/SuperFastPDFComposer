@@ -135,7 +135,7 @@ function SortableTargetPage({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, data: { from: 'target', id } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -326,50 +326,43 @@ export function PdfComposer() {
   
     const activeIdStr = active.id as UniqueId;
     const overIdStr = over.id as UniqueId;
-  
-    // Reordering within the target pane
-    if (active.data.current?.from === "target" && over.data.current?.from === "target") {
+    const isActiveFromSource = active.data.current?.from === 'source';
+    const isOverTargetArea = over.id === 'target-droppable-area' || over.data.current?.from === 'target';
+
+    // Scenario 1: Reordering within the target pane
+    if (!isActiveFromSource && over.data.current?.from === 'target') {
       if (activeIdStr === overIdStr) return;
   
       setTargetPages((pages) => {
         const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
         const newIndex = pages.findIndex((p) => p.id === overIdStr);
+        if (oldIndex === -1 || newIndex === -1) return pages;
         return arrayMove(pages, oldIndex, newIndex);
       });
-      return;
     }
-  
-    // Dropping a source page into the target area
-    if (active.data.current?.from === "source" && over.data.current?.from === "target") {
-      const { docId, pageIndex } = active.data.current;
-  
+
+    // Scenario 2: Dropping from source into target pane
+    if (isActiveFromSource && isOverTargetArea) {
+      const { docId, pageIndex } = active.data.current!;
       const newPage: TargetPage = {
         id: `target-${docId}-${pageIndex}-${Math.random()}`,
-        docId,
+        docId: docId,
         originalPageIndex: pageIndex,
       };
-  
+
       setTargetPages((pages) => {
+        // If dropping onto a specific item, insert after it.
         const overIndex = pages.findIndex((p) => p.id === overIdStr);
-        const newPages = [...pages];
-        newPages.splice(overIndex + 1, 0, newPage);
-        return newPages;
+        if (overIndex !== -1) {
+          const newPages = [...pages];
+          newPages.splice(overIndex + 1, 0, newPage);
+          return newPages;
+        }
+        // Otherwise, if dropping on the general area (or it's empty), add to the end.
+        return [...pages, newPage];
       });
-      return;
-    }
-  
-    // Dropping a source page onto the droppable area (when it's empty)
-    if (active.data.current?.from === "source" && over.id === "target-droppable-area") {
-      const { docId, pageIndex } = active.data.current;
-      const newPage: TargetPage = {
-        id: `target-${docId}-${pageIndex}-${Math.random()}`,
-        docId,
-        originalPageIndex: pageIndex,
-      };
-      setTargetPages((pages) => [...pages, newPage]);
     }
   };
-  
 
   const handleDownload = async () => {
     if (targetPages.length === 0) {
@@ -550,7 +543,7 @@ export function PdfComposer() {
             </div>
           </CardHeader>
           <CardContent className="flex-grow">
-            <SortableContext items={targetPages.map(p => ({...p, from: "target"}))} strategy={rectSortingStrategy}>
+            <SortableContext items={targetPages} strategy={rectSortingStrategy}>
               <ScrollArea className="h-[60vh] rounded-md border">
                 <div ref={setDroppableNodeRef} className="h-full p-4">
                   {targetPages.length > 0 ? (
