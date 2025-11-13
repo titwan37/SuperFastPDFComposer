@@ -96,10 +96,12 @@ function DraggableSourcePage({
   docId,
   pageIndex,
   thumbnailUrl,
+  onDoubleClick,
 }: {
   docId: UniqueId;
   pageIndex: number;
   thumbnailUrl?: string | null;
+  onDoubleClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `source-${docId}-${pageIndex}`,
@@ -112,7 +114,7 @@ function DraggableSourcePage({
   });
 
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} className="group cursor-grab touch-none">
+    <div ref={setNodeRef} {...listeners} {...attributes} className="group cursor-grab touch-none" onDoubleClick={onDoubleClick}>
       <PageThumbnail
         pageNumber={pageIndex + 1}
         thumbnailUrl={thumbnailUrl}
@@ -333,24 +335,25 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     const overIdStr = over.id as UniqueId;
   
     const activeIsTarget = active.data.current?.from === 'target';
-    const overIsTarget = over.data.current?.from === 'target' || over.id === 'target-droppable-area';
+    const overIsTargetArea = over.id === 'target-droppable-area';
+    const overIsTargetItem = over.data.current?.from === 'target';
   
     // Scenario 1: Reordering within the target pane
-    if (activeIsTarget && overIsTarget && over.id !== 'target-droppable-area') {
-      if (activeIdStr !== overIdStr) {
-        setTargetPages((pages) => {
-          const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
-          const newIndex = pages.findIndex((p) => p.id === overIdStr);
-          return arrayMove(pages, oldIndex, newIndex);
-        });
-      }
-      return;
+    if (activeIsTarget && overIsTargetItem) {
+        if (activeIdStr !== overIdStr) {
+            setTargetPages((pages) => {
+                const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
+                const newIndex = pages.findIndex((p) => p.id === overIdStr);
+                return arrayMove(pages, oldIndex, newIndex);
+            });
+        }
+        return;
     }
   
     const activeIsSource = active.data.current?.from === 'source';
     
     // Scenario 2: Dropping from source into target pane
-    if (activeIsSource && overIsTarget) {
+    if (activeIsSource && (overIsTargetArea || overIsTargetItem)) {
       const { docId, pageIndex } = active.data.current!;
       const newPage: TargetPage = {
         id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
@@ -359,8 +362,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
       };
   
       setTargetPages((pages) => {
-        if (over.id !== 'target-droppable-area') {
-          // Dropping on an existing item in the target
+        if (overIsTargetItem) {
           const overIndex = pages.findIndex((p) => p.id === overIdStr);
           if (overIndex !== -1) {
             const newPages = [...pages];
@@ -368,7 +370,6 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
             return newPages;
           }
         }
-        // Dropping on the container or an item not found, add to the end
         return [...pages, newPage];
       });
     }
@@ -469,6 +470,19 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     return { pageNumber: '', thumbnailUrl: undefined };
 }, [activeId, sourceDocs, targetPages]);
 
+  const handleSourcePageDoubleClick = (docId: UniqueId, pageIndex: number) => {
+    const newPage: TargetPage = {
+      id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
+      docId: docId,
+      originalPageIndex: pageIndex,
+    };
+    setTargetPages((pages) => [...pages, newPage]);
+    toast({
+      title: "Page Added",
+      description: `Page ${pageIndex + 1} was added to the new document.`,
+    });
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -527,6 +541,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
                               docId={id} 
                               pageIndex={i}
                               thumbnailUrl={thumbnailUrls?.[i]}
+                              onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
                             />
                           )
                         )}
@@ -623,5 +638,3 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     </DndContext>
   );
 }
-
-    
