@@ -333,10 +333,10 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     const overIdStr = over.id as UniqueId;
   
     const activeIsTarget = active.data.current?.from === 'target';
-    const overIsTarget = over.data.current?.from === 'target';
+    const overIsTarget = over.data.current?.from === 'target' || over.id === 'target-droppable-area';
   
     // Scenario 1: Reordering within the target pane
-    if (activeIsTarget && overIsTarget) {
+    if (activeIsTarget && overIsTarget && over.id !== 'target-droppable-area') {
       if (activeIdStr !== overIdStr) {
         setTargetPages((pages) => {
           const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
@@ -348,10 +348,9 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     }
   
     const activeIsSource = active.data.current?.from === 'source';
-    const overIsTargetArea = over.id === 'target-droppable-area';
-  
+    
     // Scenario 2: Dropping from source into target pane
-    if (activeIsSource && (overIsTarget || overIsTargetArea)) {
+    if (activeIsSource && overIsTarget) {
       const { docId, pageIndex } = active.data.current!;
       const newPage: TargetPage = {
         id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
@@ -360,7 +359,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
       };
   
       setTargetPages((pages) => {
-        if (overIsTarget) {
+        if (over.id !== 'target-droppable-area') {
           // Dropping on an existing item in the target
           const overIndex = pages.findIndex((p) => p.id === overIdStr);
           if (overIndex !== -1) {
@@ -428,7 +427,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
 
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
-      proceedToDownload();
+      openTipsDialog();
     } else {
        toast({
         variant: "destructive",
