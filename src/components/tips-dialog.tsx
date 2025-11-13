@@ -27,30 +27,34 @@ export function TipsDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Thank you for using PDF Composer!</DialogTitle>
+          <DialogTitle>Thank you for supporting PDF Composer!</DialogTitle>
           <DialogDescription>
-            This service is free. To cover infrastructure costs, please consider leaving a tip.
+            This service is free, but consider leaving a tip.
+            Please support us to maintain this service for free, 
+            we must cover infrastructure costs through Paypal.
+            Thank you in advance.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center space-y-4">
           <p className="text-sm text-muted-foreground">Scan the QR code with your PayPal app.</p>
           <div className="rounded-lg border p-2">
             <Image
-              src="/paypal-qr.png"
+              src="https://picsum.photos/seed/paypal-qr/200/200"
               alt="PayPal QR Code for tips"
+              data-ai-hint="qr code"
               width={200}
               height={200}
             />
           </div>
           <div className="flex w-full justify-around pt-2">
             <Button variant="outline" asChild>
-              <a href="https://www.paypal.com/paypalme/your-username/1" target="_blank" rel="noopener noreferrer">$1</a>
+              <a href="https://paypal.me/AntoineFalempin/1" target="_blank" rel="noopener noreferrer">$1</a>
             </Button>
             <Button variant="outline" asChild>
-              <a href="https://www.paypal.com/paypalme/your-username/2" target="_blank" rel="noopener noreferrer">$2</a>
+              <a href="https://paypal.me/AntoineFalempin/2" target="_blank" rel="noopener noreferrer">$2</a>
             </Button>
             <Button variant="outline" asChild>
-              <a href="https://www.paypal.com/paypalme/your-username/5" target="_blank" rel="noopener noreferrer">$5</a>
+              <a href="https://paypal.me/AntoineFalempin/5" target="_blank" rel="noopener noreferrer">$5</a>
             </Button>
           </div>
         </div>

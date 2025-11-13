@@ -27,18 +27,19 @@ export default function Home() {
       </main>
       <footer className="w-full p-4 text-center text-sm text-muted-foreground">
         <p>
-          Created on Firebase Studio. Credits: Antoine Falempin.{" "}
+          Created on Firebase Studio. 
+          |{" "}
+          <button onClick={() => setIsTipsDialogOpen(true)}
+            className="text-primary underline-offset-4 hover:underline">
+           Give me tips
+           </button>
+           {" "} | {" "}
+          Credits: Antoine Falempin.{" "}
           <a href="mailto:titwan.jobs@gmail.com"
             className="text-primary underline-offset-4 hover:underline">
             Contact
           </a>
-          {" "}|{" "}
-          <button
-            onClick={() => setIsTipsDialogOpen(true)}
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            Give me tips
-          </button>
+          {" "}
         </p>
       </footer>
       <Toaster />
