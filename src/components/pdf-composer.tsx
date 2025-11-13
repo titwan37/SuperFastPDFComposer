@@ -398,7 +398,7 @@ export function PdfComposer() {
         }
       }
 
-      const pdfBytes = await newPdfDoc.save();
+      const pdfBytes = await newPdfDoc.save({ useObjectStreams: true });
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -469,8 +469,8 @@ export function PdfComposer() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Source PDF Documents</CardTitle>
-              </div>
-              <div className="flex items-center justify-between">
+            </div>
+            <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
                 <Plus className="mr-2 h-4 w-4" /> Add PDF
               </Button>
@@ -532,7 +532,7 @@ export function PdfComposer() {
           <CardHeader>
              <div className="flex items-center justify-between">
                 <CardTitle>Target PDF Document (New)</CardTitle>
-                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
