@@ -39,6 +39,7 @@ import type { SourceDoc, TargetPage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TipsDialog } from "@/components/tips-dialog";
 
 // pdf.js worker configuration
 if (typeof window !== "undefined") {
@@ -180,6 +181,7 @@ export function PdfComposer() {
   const [targetPages, setTargetPages] = useState<TargetPage[]>([]);
   const [activeId, setActiveId] = useState<UniqueId | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
@@ -373,7 +375,7 @@ export function PdfComposer() {
     }
   };
 
-  const handleDownload = async () => {
+  const proceedToDownload = async () => {
     if (targetPages.length === 0) {
       toast({
         variant: "destructive",
@@ -424,6 +426,15 @@ export function PdfComposer() {
     }
   };
 
+  const handleDownloadClick = () => {
+    if (targetPages.length > 0) {
+      setIsTipsDialogOpen(true);
+    } else {
+      proceedToDownload();
+    }
+  };
+
+
   const { isOver, setNodeRef: setDroppableNodeRef } = useDroppable({
     id: 'target-droppable-area',
   });
@@ -463,12 +474,20 @@ export function PdfComposer() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+       <TipsDialog
+        isOpen={isTipsDialogOpen}
+        onClose={() => setIsTipsDialogOpen(false)}
+        onConfirm={() => {
+          setIsTipsDialogOpen(false);
+          proceedToDownload();
+        }}
+      />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Source Pane */}
         <Card className="flex flex-col">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Source PDF Documents</CardTitle>
+             <div>
+                <CardTitle>Source PDF Documents</CardTitle>
             </div>
             <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
@@ -530,13 +549,13 @@ export function PdfComposer() {
         {/* Target Pane */}
         <Card className="flex flex-col">
           <CardHeader>
-             <div className="flex items-center justify-between">
+             <div>
                 <CardTitle>Target PDF Document (New)</CardTitle>
-              </div>
+            </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Load Base
+                    <Upload className="mr-2 h-4 w-4" /> Load
                   </Button>
                   <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" /> Clear
@@ -548,7 +567,7 @@ export function PdfComposer() {
                     className="hidden"
                     accept="application/pdf"
                   />
-                  <Button onClick={handleDownload} disabled={isLoading || targetPages.length === 0}>
+                  <Button onClick={handleDownloadClick} disabled={isLoading || targetPages.length === 0}>
                     {isLoading ? (
                       <Loader className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -581,7 +600,7 @@ export function PdfComposer() {
                       isOver ? "border-primary bg-accent/10" : ""
                     )}>
                       <p className="font-semibold">Drag pages here</p>
-                      <p className="text-sm">or load a base PDF to edit.</p>
+                      <p className="text-sm">or load a target PDF to edit.</p>
                     </div>
                   )}
                 </div>

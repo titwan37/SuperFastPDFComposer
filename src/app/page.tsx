@@ -7,7 +7,7 @@ export default function Home() {
       <main className="flex min-h-screen flex-col items-center bg-background p-4 pt-12 font-body text-foreground md:p-8 md:pt-16">
         <div className="w-full max-w-screen-2xl">
           <header className="mb-8 text-center">
-            <h1 className="font-headline text-xl font-extrabold tracking-tight text-primary sm:text-2xl lg:text-3xl">
+            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-primary sm:text-2xl lg:text-3xl">
               PDF Composer
             </h1>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
@@ -21,11 +21,9 @@ export default function Home() {
       </main>
       <footer className="w-full p-4 text-center text-sm text-muted-foreground">
         <p>
-          Created by Antoine Falempin.{" "}
-          <a
-            href="mailto:titwan.jobs@gmail.com"
-            className="text-primary underline-offset-4 hover:underline"
-          >
+          Created on Firebase Studio. Credits: Antoine Falempin.{" "}
+          <a href="mailto:titwan.jobs@gmail.com"
+            className="text-primary underline-offset-4 hover:underline">
             Contact
           </a>
         </p>
