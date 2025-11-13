@@ -325,48 +325,61 @@ export function PdfComposer() {
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+ const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-  
+
+    const activeIdStr = active.id as UniqueId;
+
+    // Item was dragged but not dropped on a valid target, remove temporary item
     if (!over) {
-        // If dragged outside of any droppable area, remove if it was a temporary add
-        if ((active.id as string).startsWith('source-')) {
-            setTargetPages(pages => pages.filter(p => p.id !== active.id));
-        }
-        return;
+      if (activeIdStr.startsWith('source-')) {
+        setTargetPages((pages) => pages.filter((p) => p.id !== activeIdStr));
+      }
+      return;
     }
-  
-    const activeId = active.id as UniqueId;
-    const overId = over.id as UniqueId;
-  
-    // Case 1: A source page was dragged into the target area
-    if (activeId.startsWith('source-') && over.data.current?.sortable) {
-        const overIndex = over.data.current.sortable.index;
-        
-        setTargetPages(pages => {
-            const newPages = pages.map(p => p.id === activeId ? {...p, id: `target-${p.docId}-${p.originalPageIndex}-${Math.random()}`} : p);
-            const activeIndex = newPages.findIndex(p => p.id.startsWith('target-')); // Find the newly created page
-            if (activeIndex === -1) return pages;
 
-            return arrayMove(newPages, activeIndex, overIndex);
-        });
+    const overIdStr = over.id as UniqueId;
 
-    } else if (activeId.startsWith('source-') && overId === 'target-droppable-area') {
-        // Item was dropped on the container itself, not on another item. Finalize the add.
-        setTargetPages(pages => pages.map(p => p.id === activeId ? {...p, id: `target-${p.docId}-${p.originalPageIndex}-${Math.random()}`} : p));
-
-    } else if (activeId.startsWith('target-') && overId.startsWith('target-')) {
-      // Case 2: Reordering within the target pane
-      const oldIndex = targetPages.findIndex((p) => p.id === activeId);
-      const newIndex = targetPages.findIndex((p) => p.id === overId);
+    // Reordering within the target pane
+    if (activeIdStr.startsWith('target-') && overIdStr.startsWith('target-')) {
+      const oldIndex = targetPages.findIndex((p) => p.id === activeIdStr);
+      const newIndex = targetPages.findIndex((p) => p.id === overIdStr);
       if (oldIndex !== newIndex) {
         setTargetPages((pages) => arrayMove(pages, oldIndex, newIndex));
       }
+      return;
+    }
+    
+    const isOverTargetArea = overIdStr === 'target-droppable-area' || over.data.current?.sortable;
+
+    // A source page was dragged into the target area
+    if (activeIdStr.startsWith('source-') && isOverTargetArea) {
+      const [, docId, pageIndexStr] = activeIdStr.split('-');
+      const originalPageIndex = parseInt(pageIndexStr, 10);
+      
+      const newPage: TargetPage = {
+        id: `target-${docId}-${originalPageIndex}-${Math.random()}`,
+        docId,
+        originalPageIndex,
+      };
+
+      // If dropped on another item, find its index to insert
+      const overIndex = over.data.current?.sortable 
+        ? over.data.current.sortable.index 
+        : targetPages.length - 1; // Adjust for the temp item from onDragOver
+
+      setTargetPages((pages) => {
+        // Replace the temporary page with the final new page
+        const pagesWithoutTemp = pages.filter(p => p.id !== activeIdStr);
+        pagesWithoutTemp.splice(overIndex, 0, newPage);
+        return pagesWithoutTemp;
+      });
     } else {
-       if ((active.id as string).startsWith('source-')) {
-            setTargetPages(pages => pages.filter(p => p.id !== active.id));
-        }
+      // If a source item was dragged but not onto the target, remove the temp item
+      if (activeIdStr.startsWith('source-')) {
+        setTargetPages(pages => pages.filter(p => p.id !== activeIdStr));
+      }
     }
   };
 
