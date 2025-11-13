@@ -1,7 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import { PdfComposer } from "@/components/pdf-composer";
 import { Toaster } from "@/components/ui/toaster";
+import { TipsDialog } from "@/components/tips-dialog";
 
 export default function Home() {
+  const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
+
   return (
     <>
       <main className="flex min-h-screen flex-col items-center bg-background p-4 pt-12 font-body text-foreground md:p-8 md:pt-16">
@@ -16,7 +22,7 @@ export default function Home() {
               No leak, no fee.
             </p>
           </header>
-          <PdfComposer />
+          <PdfComposer openTipsDialog={() => setIsTipsDialogOpen(true)} />
         </div>
       </main>
       <footer className="w-full p-4 text-center text-sm text-muted-foreground">
@@ -26,9 +32,23 @@ export default function Home() {
             className="text-primary underline-offset-4 hover:underline">
             Contact
           </a>
+          {" "}|{" "}
+          <button
+            onClick={() => setIsTipsDialogOpen(true)}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Give me tips
+          </button>
         </p>
       </footer>
       <Toaster />
+       <TipsDialog
+        isOpen={isTipsDialogOpen}
+        onClose={() => setIsTipsDialogOpen(false)}
+        onConfirm={() => {
+          setIsTipsDialogOpen(false);
+        }}
+      />
     </>
   );
 }

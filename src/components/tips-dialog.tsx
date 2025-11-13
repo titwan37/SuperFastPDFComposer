@@ -18,6 +18,11 @@ export function TipsDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -50,7 +55,7 @@ export function TipsDialog({
           </div>
         </div>
         <DialogFooter className="sm:justify-center pt-4">
-           <Button type="button" onClick={onConfirm}>
+           <Button type="button" onClick={handleConfirm}>
             Continue to Download
           </Button>
         </DialogFooter>

@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
-import * as pdfjs from "pdfjs-dist";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf";
 import {
   Upload,
   Download,
@@ -176,12 +176,11 @@ function SortableTargetPage({
   );
 }
 
-export function PdfComposer() {
+export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) {
   const [sourceDocs, setSourceDocs] = useState<Record<UniqueId, SourceDoc>>({});
   const [targetPages, setTargetPages] = useState<TargetPage[]>([]);
   const [activeId, setActiveId] = useState<UniqueId | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
@@ -428,12 +427,11 @@ export function PdfComposer() {
 
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
-      setIsTipsDialogOpen(true);
+      openTipsDialog();
     } else {
       proceedToDownload();
     }
   };
-
 
   const { isOver, setNodeRef: setDroppableNodeRef } = useDroppable({
     id: 'target-droppable-area',
@@ -475,12 +473,9 @@ export function PdfComposer() {
       onDragEnd={handleDragEnd}
     >
        <TipsDialog
-        isOpen={isTipsDialogOpen}
-        onClose={() => setIsTipsDialogOpen(false)}
-        onConfirm={() => {
-          setIsTipsDialogOpen(false);
-          proceedToDownload();
-        }}
+        isOpen={false} // This is now controlled by the parent
+        onClose={() => {}}
+        onConfirm={proceedToDownload}
       />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Source Pane */}
