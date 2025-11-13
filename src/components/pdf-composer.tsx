@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -12,13 +12,12 @@ import {
   closestCenter,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
   arrayMove,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
@@ -31,6 +30,7 @@ import {
   GripVertical,
   Loader,
   Plus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +98,12 @@ function DraggableSourcePage({
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `source-${docId}-${pageIndex}`,
+    data: {
+      from: "source",
+      docId,
+      pageIndex,
+      thumbnailUrl,
+    },
   });
 
   return (
@@ -240,27 +246,7 @@ export function PdfComposer() {
       };
 
       setSourceDocs((prev) => ({ ...prev, [docId]: newSourceDoc }));
-
-      // Sequentially render thumbnails to avoid overwhelming the browser
-      for (let i = 0; i < pageCount; i++) {
-        try {
-          const thumbnailUrl = await renderPdfPage(pdfjsDoc, i + 1);
-          setSourceDocs((prev) => {
-            const updatedDoc = { ...prev[docId] };
-            updatedDoc.thumbnailUrls[i] = thumbnailUrl;
-            return { ...prev, [docId]: updatedDoc };
-          });
-        } catch (renderError) {
-          console.error(`Failed to render page ${i + 1}:`, renderError);
-          // Set to null to indicate failure, so we can show a placeholder
-           setSourceDocs((prev) => {
-            const updatedDoc = { ...prev[docId] };
-            updatedDoc.thumbnailUrls[i] = null;
-            return { ...prev, [docId]: updatedDoc };
-          });
-        }
-      }
-
+      
       if (pane === "target") {
         const newTargetPages = Array.from({ length: pdfDoc.getPageCount() }).map(
           (_, i) => ({
@@ -269,12 +255,35 @@ export function PdfComposer() {
             originalPageIndex: i,
           })
         );
-        setTargetPages(newTargetPages);
+        setTargetPages(pages => [...pages, ...newTargetPages]);
       }
+
       toast({
         title: "PDF Loaded",
         description: `"${file.name}" has been loaded successfully.`,
       });
+
+      // Sequentially render thumbnails to avoid overwhelming the browser
+      for (let i = 0; i < pageCount; i++) {
+        try {
+          const thumbnailUrl = await renderPdfPage(pdfjsDoc, i + 1);
+          setSourceDocs((prev) => {
+            const updatedDoc = { ...prev[docId] };
+            if(!updatedDoc) return prev;
+            updatedDoc.thumbnailUrls[i] = thumbnailUrl;
+            return { ...prev, [docId]: updatedDoc };
+          });
+        } catch (renderError) {
+          console.error(`Failed to render page ${i + 1}:`, renderError);
+          // Set to null to indicate failure, so we can show a placeholder
+           setSourceDocs((prev) => {
+            const updatedDoc = { ...prev[docId] };
+            if(!updatedDoc) return prev;
+            updatedDoc.thumbnailUrls[i] = null;
+            return { ...prev, [docId]: updatedDoc };
+          });
+        }
+      }
     } catch (error) {
       console.error("Failed to load PDF:", error);
       toast({
@@ -293,95 +302,74 @@ export function PdfComposer() {
   const deleteTargetPage = (id: UniqueId) => {
     setTargetPages((pages) => pages.filter((p) => p.id !== id));
   };
+
+  const deleteSourceDoc = (docId: UniqueId) => {
+    // Remove the source document
+    setSourceDocs(currentDocs => {
+      const newDocs = {...currentDocs};
+      delete newDocs[docId];
+      return newDocs;
+    });
+    // Remove any pages from the target that came from this source document
+    setTargetPages(currentPages => currentPages.filter(p => p.docId !== docId));
+  };
   
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as UniqueId);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
+  
     if (!over) return;
   
-    const activeId = active.id as UniqueId;
-    const overId = over.id as UniqueId;
-
-    if (activeId.startsWith('source-') && overId === 'target-droppable-area') {
-      const isAlreadyInTarget = targetPages.some(page => page.id === activeId);
-      if (isAlreadyInTarget) return;
-
-      const [, docId, pageIndexStr] = activeId.split("-");
-      const pageIndex = parseInt(pageIndexStr, 10);
-      
+    const activeIdStr = active.id as UniqueId;
+    const overIdStr = over.id as UniqueId;
+  
+    // Reordering within the target pane
+    if (active.data.current?.from === "target" && over.data.current?.from === "target") {
+      if (activeIdStr === overIdStr) return;
+  
+      setTargetPages((pages) => {
+        const oldIndex = pages.findIndex((p) => p.id === activeIdStr);
+        const newIndex = pages.findIndex((p) => p.id === overIdStr);
+        return arrayMove(pages, oldIndex, newIndex);
+      });
+      return;
+    }
+  
+    // Dropping a source page into the target area
+    if (active.data.current?.from === "source" && over.data.current?.from === "target") {
+      const { docId, pageIndex } = active.data.current;
+  
       const newPage: TargetPage = {
-        id: activeId, // Use the source ID temporarily
+        id: `target-${docId}-${pageIndex}-${Math.random()}`,
         docId,
         originalPageIndex: pageIndex,
       };
-
-      setTargetPages(pages => {
-          if (pages.find(p => p.id === activeId)) return pages;
-          return [...pages, newPage];
-      });
-    }
-  };
-
- const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    const activeIdStr = active.id as UniqueId;
-
-    // Item was dragged but not dropped on a valid target, remove temporary item
-    if (!over) {
-      if (activeIdStr.startsWith('source-')) {
-        setTargetPages((pages) => pages.filter((p) => p.id !== activeIdStr));
-      }
-      return;
-    }
-
-    const overIdStr = over.id as UniqueId;
-
-    // Reordering within the target pane
-    if (activeIdStr.startsWith('target-') && overIdStr.startsWith('target-')) {
-      const oldIndex = targetPages.findIndex((p) => p.id === activeIdStr);
-      const newIndex = targetPages.findIndex((p) => p.id === overIdStr);
-      if (oldIndex !== newIndex) {
-        setTargetPages((pages) => arrayMove(pages, oldIndex, newIndex));
-      }
-      return;
-    }
-    
-    const isOverTargetArea = overIdStr === 'target-droppable-area' || over.data.current?.sortable;
-
-    // A source page was dragged into the target area
-    if (activeIdStr.startsWith('source-') && isOverTargetArea) {
-      const [, docId, pageIndexStr] = activeIdStr.split('-');
-      const originalPageIndex = parseInt(pageIndexStr, 10);
-      
-      const newPage: TargetPage = {
-        id: `target-${docId}-${originalPageIndex}-${Math.random()}`,
-        docId,
-        originalPageIndex,
-      };
-
-      // If dropped on another item, find its index to insert
-      const overIndex = over.data.current?.sortable 
-        ? over.data.current.sortable.index 
-        : targetPages.length - 1; // Adjust for the temp item from onDragOver
-
+  
       setTargetPages((pages) => {
-        // Replace the temporary page with the final new page
-        const pagesWithoutTemp = pages.filter(p => p.id !== activeIdStr);
-        pagesWithoutTemp.splice(overIndex, 0, newPage);
-        return pagesWithoutTemp;
+        const overIndex = pages.findIndex((p) => p.id === overIdStr);
+        const newPages = [...pages];
+        newPages.splice(overIndex + 1, 0, newPage);
+        return newPages;
       });
-    } else {
-      // If a source item was dragged but not onto the target, remove the temp item
-      if (activeIdStr.startsWith('source-')) {
-        setTargetPages(pages => pages.filter(p => p.id !== activeIdStr));
-      }
+      return;
+    }
+  
+    // Dropping a source page onto the droppable area (when it's empty)
+    if (active.data.current?.from === "source" && over.id === "target-droppable-area") {
+      const { docId, pageIndex } = active.data.current;
+      const newPage: TargetPage = {
+        id: `target-${docId}-${pageIndex}-${Math.random()}`,
+        docId,
+        originalPageIndex: pageIndex,
+      };
+      setTargetPages((pages) => [...pages, newPage]);
     }
   };
+  
 
   const handleDownload = async () => {
     if (targetPages.length === 0) {
@@ -397,12 +385,14 @@ export function PdfComposer() {
     try {
       const newPdfDoc = await PDFDocument.create();
       for (const targetPage of targetPages) {
-        const sourceDoc = sourceDocs[targetPage.docId]?.doc;
-        if (sourceDoc) {
-          const [copiedPage] = await newPdfDoc.copyPages(sourceDoc, [
+        const sourceDocData = sourceDocs[targetPage.docId];
+        if (sourceDocData?.doc) {
+           const [copiedPage] = await newPdfDoc.copyPages(sourceDocData.doc, [
             targetPage.originalPageIndex,
           ]);
           newPdfDoc.addPage(copiedPage);
+        } else {
+           console.warn(`Source document with id ${targetPage.docId} not found. Skipping page.`);
         }
       }
 
@@ -432,18 +422,16 @@ export function PdfComposer() {
     }
   };
 
-  const { isDroppable, setNodeRef: setDroppableNodeRef } = useDroppable({
+  const { isOver, setNodeRef: setDroppableNodeRef } = useDroppable({
     id: 'target-droppable-area',
   });
 
   const getActivePageData = useCallback(() => {
     if (!activeId) return { pageNumber: '', thumbnailUrl: undefined };
 
-    let page, pageIndex;
-
     if (activeId.startsWith('source-')) {
         const [, docId, pageIndexStr] = activeId.split('-');
-        pageIndex = parseInt(pageIndexStr, 10);
+        const pageIndex = parseInt(pageIndexStr, 10);
         const sourceDoc = sourceDocs[docId];
         return {
             pageNumber: pageIndex + 1,
@@ -472,7 +460,6 @@ export function PdfComposer() {
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onDragOver={handleDragOver}
     >
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Source Pane */}
@@ -495,8 +482,19 @@ export function PdfComposer() {
               <div className="space-y-6">
                 {Object.keys(sourceDocs).length > 0 ? (
                   Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
-                    <div key={id}>
-                      <h3 className="mb-2 font-semibold text-foreground">{filename}</h3>
+                    <div key={id} className="group/source-doc relative">
+                       <div className="mb-2 flex items-center justify-between">
+                        <h3 className="font-semibold text-foreground">{filename}</h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 transition-opacity group-hover/source-doc:opacity-100"
+                          onClick={() => deleteSourceDoc(id)}
+                          aria-label={`Delete ${filename}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
                         {Array.from({ length: doc.getPageCount() }).map(
                           (_, i) => (
@@ -528,6 +526,9 @@ export function PdfComposer() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>New Document</CardTitle>
             <div className="flex gap-2">
+               <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
+                <Trash2 className="mr-2 h-4 w-4" /> Clear
+              </Button>
               <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
                 <Upload className="mr-2 h-4 w-4" /> Load Base
               </Button>
@@ -549,30 +550,32 @@ export function PdfComposer() {
             </div>
           </CardHeader>
           <CardContent className="flex-grow">
-          <SortableContext items={targetPages.map(p => p.id)} strategy={verticalListSortingStrategy}>
-            <ScrollArea ref={setDroppableNodeRef} className="h-[60vh] rounded-md border p-4">
-                {targetPages.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-                    {targetPages.map((page, index) => (
-                      <SortableTargetPage
-                        key={page.id}
-                        id={page.id}
-                        pageNumber={index + 1}
-                        thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
-                        onDelete={deleteTargetPage}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className={cn(
-                    "flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
-                     isDroppable ? "border-primary bg-accent/10" : ""
-                  )}>
-                    <p className="font-semibold">Drag pages here</p>
-                    <p className="text-sm">or load a base PDF to edit.</p>
-                  </div>
-                )}
-            </ScrollArea>
+            <SortableContext items={targetPages.map(p => ({...p, from: "target"}))} strategy={rectSortingStrategy}>
+              <ScrollArea className="h-[60vh] rounded-md border">
+                <div ref={setDroppableNodeRef} className="h-full p-4">
+                  {targetPages.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+                      {targetPages.map((page, index) => (
+                        <SortableTargetPage
+                          key={page.id}
+                          id={page.id}
+                          pageNumber={index + 1}
+                          thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
+                          onDelete={deleteTargetPage}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
+                      isOver ? "border-primary bg-accent/10" : ""
+                    )}>
+                      <p className="font-semibold">Drag pages here</p>
+                      <p className="text-sm">or load a base PDF to edit.</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </SortableContext>
           </CardContent>
         </Card>
