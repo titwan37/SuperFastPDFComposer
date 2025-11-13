@@ -47,6 +47,9 @@ if (typeof window !== "undefined") {
 
 type UniqueId = string;
 
+let uniqueIdCounter = 0;
+const getUniqueId = () => `id-${Date.now()}-${uniqueIdCounter++}`;
+
 // Sub-component for a single page thumbnail
 function PageThumbnail({
   pageNumber,
@@ -232,7 +235,7 @@ export function PdfComposer() {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const docId = `${Date.now()}-${Math.random()}`;
+      const docId = getUniqueId();
 
       // For rendering thumbnails
       const pdfjsDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
@@ -250,7 +253,7 @@ export function PdfComposer() {
       if (pane === "target") {
         const newTargetPages = Array.from({ length: pdfDoc.getPageCount() }).map(
           (_, i) => ({
-            id: `target-${docId}-${i}-${Math.random()}`,
+            id: `target-${docId}-${i}-${getUniqueId()}`,
             docId,
             originalPageIndex: i,
           })
@@ -326,11 +329,12 @@ export function PdfComposer() {
   
     const activeIdStr = active.id as UniqueId;
     const overIdStr = over.id as UniqueId;
-    const isActiveFromSource = active.data.current?.from === 'source';
-    const isOverTargetArea = over.id === 'target-droppable-area' || over.data.current?.from === 'target';
+    
+    const isActiveFromTarget = active.data.current?.from === 'target';
+    const isOverTarget = over.data.current?.from === 'target';
 
     // Scenario 1: Reordering within the target pane
-    if (!isActiveFromSource && over.data.current?.from === 'target') {
+    if (isActiveFromTarget && isOverTarget) {
       if (activeIdStr === overIdStr) return;
   
       setTargetPages((pages) => {
@@ -339,26 +343,30 @@ export function PdfComposer() {
         if (oldIndex === -1 || newIndex === -1) return pages;
         return arrayMove(pages, oldIndex, newIndex);
       });
+      return;
     }
+    
+    const isActiveFromSource = active.data.current?.from === 'source';
+    const isOverDroppableArea = over.id === 'target-droppable-area';
 
     // Scenario 2: Dropping from source into target pane
-    if (isActiveFromSource && isOverTargetArea) {
+    if (isActiveFromSource && (isOverTarget || isOverDroppableArea)) {
       const { docId, pageIndex } = active.data.current!;
       const newPage: TargetPage = {
-        id: `target-${docId}-${pageIndex}-${Math.random()}`,
+        id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
         docId: docId,
         originalPageIndex: pageIndex,
       };
 
       setTargetPages((pages) => {
-        // If dropping onto a specific item, insert after it.
         const overIndex = pages.findIndex((p) => p.id === overIdStr);
         if (overIndex !== -1) {
+          // Insert after the item we dropped on
           const newPages = [...pages];
           newPages.splice(overIndex + 1, 0, newPage);
           return newPages;
         }
-        // Otherwise, if dropping on the general area (or it's empty), add to the end.
+        // Otherwise, add to the end
         return [...pages, newPage];
       });
     }
