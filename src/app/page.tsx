@@ -37,12 +37,12 @@ export default function Home() {
         <div className="w-full max-w-screen-2xl">
           <header className="mb-8 text-center">
             <h1 className="font-headline text-xl font-extrabold tracking-tight text-primary sm:text-xl lg:text-2xl">
-              PDF Composer
+             SuperFast PDF Composer
             </h1>
             <p className="mx-auto mt-2 max-w-xl text-xs text-muted-foreground">
-              Load, reorder, drag-and-drop and compose visually your new PDF document. 
+              Load and compose visually your new PDF document.
+              Select, double-click, reorder, drag-and-drop, delete, add all.   
               All processing is done securely in your own browser.
-              No leak, no fee.
             </p>
           </header>
           <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />

@@ -22,7 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument } from "pdf-lib";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf";
+import * as pdfjs from "pdfjs-dist";
 import {
   Upload,
   Download,
@@ -515,7 +515,7 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
         {/* Source Pane */}
         <Card className="flex flex-col">
           <CardHeader>
-             <div>
+             <div className="mb-2 flex items-center justify-between">
                 <CardTitle>Source Documents</CardTitle>
             </div>
             <div className="flex items-center justify-between">
@@ -583,7 +583,7 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
         {/* Target Pane */}
         <Card className="flex flex-col">
           <CardHeader>
-             <div>
+             <div className="mb-2 flex items-center justify-between">
                 <CardTitle>New Document</CardTitle>
             </div>
               <div className="flex items-center justify-between">
