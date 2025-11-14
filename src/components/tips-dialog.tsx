@@ -75,12 +75,14 @@ export function TipsDialog({
             <CardContent>
               <div className="flex h-full flex-col items-center justify-center space-y-4 pt-4">
                  <p className="text-center text-sm text-muted-foreground">Click the button below to leave a tip.</p>
+                 <div className="flex w-full flex-row items-center justify-center gap-4 pt-4">
                   <Coffee className="h-16 w-16 text-yellow-500" />
-                  <Button asChild className="mt-4 w-full bg-yellow-500 text-white hover:bg-yellow-600">
+                  <Button asChild className="bg-yellow-500 text-white hover:bg-yellow-600">
                      <a href="https://buymeacoffee.com/titwan" target="_blank" rel="noopener noreferrer">
                       Buy Me a Coffee
                     </a>
                   </Button>
+                 </div>
               </div>
             </CardContent>
           </Card>
