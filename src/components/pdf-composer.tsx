@@ -179,7 +179,7 @@ function SortableTargetPage({
   );
 }
 
-export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) {
+export function PdfComposer({ openTipsDialog }: { openTipsDialog: (onConfirm?: () => void) => void }) {
   const [sourceDocs, setSourceDocs] = useState<Record<UniqueId, SourceDoc>>({});
   const [targetPages, setTargetPages] = useState<TargetPage[]>([]);
   const [activeId, setActiveId] = useState<UniqueId | null>(null);
@@ -428,7 +428,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
 
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
-      openTipsDialog();
+      openTipsDialog(proceedToDownload);
     } else {
        toast({
         variant: "destructive",
@@ -458,7 +458,6 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
     if (activeId.startsWith('target-')) {
         const targetPage = targetPages.find(p => p.id === activeId);
         if (!targetPage) return { pageNumber: '', thumbnailUrl: undefined };
-
         const pageIdxInTarget = targetPages.indexOf(targetPage);
         const sourceDoc = sourceDocs[targetPage.docId];
         return {
@@ -490,11 +489,6 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-       <TipsDialog
-        isOpen={false} // This is now controlled by the parent
-        onClose={() => {}}
-        onConfirm={proceedToDownload}
-      />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Source Pane */}
         <Card className="flex flex-col">
@@ -516,7 +510,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
             />
           </CardHeader>
           <CardContent className="flex-grow">
-            <ScrollArea className="h-[60vh] rounded-md border p-4">
+            <ScrollArea className="h-[52vh] rounded-md border p-4">
               <div className="space-y-6">
                 {Object.keys(sourceDocs).length > 0 ? (
                   Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
@@ -594,7 +588,7 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: () => void }) 
           </CardHeader>
           <CardContent className="flex-grow">
             <SortableContext items={targetPages.map(p => p.id)} strategy={rectSortingStrategy}>
-              <ScrollArea className="h-[60vh] rounded-md border">
+              <ScrollArea className="h-[52vh] rounded-md border">
                 <div ref={setDroppableNodeRef} className="h-full p-4">
                   {targetPages.length > 0 ? (
                     <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">

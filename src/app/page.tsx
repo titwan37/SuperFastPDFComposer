@@ -7,6 +7,25 @@ import { TipsDialog } from "@/components/tips-dialog";
 
 export default function Home() {
   const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
+  const [downloadAction, setDownloadAction] = useState<(() => void) | null>(
+    null
+  );
+
+  const openTipsDialog = (onConfirm?: () => void) => {
+    if (onConfirm) {
+      setDownloadAction(() => onConfirm);
+    } else {
+      setDownloadAction(null);
+    }
+    setIsTipsDialogOpen(true);
+  };
+
+  const handleConfirm = () => {
+    if (downloadAction) {
+      downloadAction();
+    }
+    setIsTipsDialogOpen(false);
+  };
 
   return (
     <>
@@ -25,7 +44,7 @@ export default function Home() {
               No leak, no fee.
             </p>
           </header>
-          <PdfComposer openTipsDialog={() => setIsTipsDialogOpen(true)} />
+          <PdfComposer openTipsDialog={openTipsDialog} />
         </div>
       </main>
       <footer
@@ -35,7 +54,7 @@ export default function Home() {
         <p>
           Created on Firebase Studio. 
           |{" "}
-          <button onClick={() => setIsTipsDialogOpen(true)}
+          <button onClick={() => openTipsDialog()}
             className="text-primary underline-offset-4 hover:underline">
            Give me tips
            </button>
@@ -52,9 +71,7 @@ export default function Home() {
        <TipsDialog
         isOpen={isTipsDialogOpen}
         onClose={() => setIsTipsDialogOpen(false)}
-        onConfirm={() => {
-          setIsTipsDialogOpen(false);
-        }}
+        onConfirm={handleConfirm}
       />
     </>
   );
