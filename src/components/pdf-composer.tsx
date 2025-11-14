@@ -540,23 +540,15 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
                        <div className="mb-2 flex items-center justify-between">
                         <h3 className="font-semibold text-foreground">{filename}</h3>
                         <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
-                           <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7"
+                           <Button variant="ghost" size="sm" className="h-7"
                               onClick={() => addAllPagesFromSource(id)}
-                              aria-label={`Add all pages from ${filename}`}
-                            >
+                              aria-label={`Add all pages from ${filename}`}>
                               <PlusSquare className="mr-2 h-4 w-4" />
                               Add All
                             </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
+                          <Button variant="ghost" size="icon" className="h-7 w-7"
                             onClick={() => deleteSourceDoc(id)}
-                            aria-label={`Delete ${filename}`}
-                          >
+                            aria-label={`Delete ${filename}`}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
