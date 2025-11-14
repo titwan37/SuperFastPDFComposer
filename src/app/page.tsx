@@ -1,15 +1,19 @@
+
 "use client";
 
 import { useState } from "react";
 import { PdfComposer } from "@/components/pdf-composer";
 import { Toaster } from "@/components/ui/toaster";
 import { TipsDialog } from "@/components/tips-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ChevronsDown } from "lucide-react";
 
 export default function Home() {
   const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
   const [downloadAction, setDownloadAction] = useState<(() => void) | null>(
     null
   );
+  const isMobile = useIsMobile();
 
   const openTipsDialog = () => {
     setIsTipsDialogOpen(true);
@@ -42,11 +46,16 @@ export default function Home() {
             <p className="mx-auto mt-2 max-w-xl text-xs text-muted-foreground">
               Load and compose visually your new PDF document.
               Select, double-click, reorder, drag-and-drop, delete, add all.   
-              All processing is done securely in your own browser.
+              All processing is done securely in your new browser.
             </p>
           </header>
           <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />
         </div>
+        {isMobile && (
+          <div className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 md:hidden">
+            <ChevronsDown className="h-8 w-8 animate-bounce-y text-primary/70" />
+          </div>
+        )}
       </main>
       <footer
         className="w-full p-4 text-center text-sm text-muted-foreground"
