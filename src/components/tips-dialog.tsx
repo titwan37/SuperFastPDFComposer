@@ -26,7 +26,7 @@ export function TipsDialog({
   }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Thank you for supporting PDF Composer!</DialogTitle>
           <DialogDescription>
@@ -34,7 +34,7 @@ export function TipsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4">
           {/* PayPal Card */}
           <Card>
             <CardHeader>
@@ -73,7 +73,7 @@ export function TipsDialog({
               <CardTitle className="text-lg">Via Buy Me a Coffee</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex h-full flex-col items-center justify-center space-y-4 pt-4">
+              <div className="flex flex-col items-center justify-center space-y-4 pt-2">
                  <p className="text-center text-sm text-muted-foreground">Click the button below to leave a tip.</p>
                  <div className="flex w-full flex-row items-center justify-center gap-4 pt-4">
                   <Coffee className="h-16 w-16 text-yellow-500" />
