@@ -11,21 +11,22 @@ export default function Home() {
     null
   );
 
-  const openTipsDialog = (onConfirm?: () => void) => {
-    if (onConfirm) {
-      setDownloadAction(() => onConfirm);
-    } else {
-      setDownloadAction(null);
-    }
+  const openTipsDialog = () => {
     setIsTipsDialogOpen(true);
   };
-
+  
   const handleConfirm = () => {
     if (downloadAction) {
       downloadAction();
     }
+    setDownloadAction(null);
     setIsTipsDialogOpen(false);
   };
+
+  const handleClose = () => {
+    setDownloadAction(null);
+    setIsTipsDialogOpen(false);
+  }
 
   return (
     <>
@@ -44,7 +45,7 @@ export default function Home() {
               No leak, no fee.
             </p>
           </header>
-          <PdfComposer openTipsDialog={openTipsDialog} />
+          <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />
         </div>
       </main>
       <footer
@@ -70,7 +71,7 @@ export default function Home() {
       <Toaster />
        <TipsDialog
         isOpen={isTipsDialogOpen}
-        onClose={() => setIsTipsDialogOpen(false)}
+        onClose={handleClose}
         onConfirm={handleConfirm}
       />
     </>

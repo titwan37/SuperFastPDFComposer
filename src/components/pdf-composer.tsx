@@ -32,6 +32,7 @@ import {
   Loader,
   Plus,
   X,
+  PlusSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,7 +180,7 @@ function SortableTargetPage({
   );
 }
 
-export function PdfComposer({ openTipsDialog }: { openTipsDialog: (onConfirm?: () => void) => void }) {
+export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDialog: (onConfirm?: () => void) => void, setDownloadAction: (action: (() => void) | null) => void }) {
   const [sourceDocs, setSourceDocs] = useState<Record<UniqueId, SourceDoc>>({});
   const [targetPages, setTargetPages] = useState<TargetPage[]>([]);
   const [activeId, setActiveId] = useState<UniqueId | null>(null);
@@ -428,7 +429,8 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: (onConfirm?: (
 
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
-      openTipsDialog(proceedToDownload);
+      setDownloadAction(() => proceedToDownload);
+      openTipsDialog();
     } else {
        toast({
         variant: "destructive",
@@ -482,6 +484,26 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: (onConfirm?: (
     });
   };
 
+  const addAllPagesFromSource = (docId: UniqueId) => {
+    const sourceDoc = sourceDocs[docId];
+    if (!sourceDoc) return;
+
+    const newPages: TargetPage[] = Array.from({ length: sourceDoc.doc.getPageCount() }).map(
+      (_, i) => ({
+        id: `target-${docId}-${i}-${getUniqueId()}`,
+        docId: docId,
+        originalPageIndex: i,
+      })
+    );
+
+    setTargetPages((pages) => [...pages, ...newPages]);
+
+    toast({
+      title: "Pages Added",
+      description: `All pages from "${sourceDoc.filename}" have been added to the new document.`,
+    });
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -517,15 +539,27 @@ export function PdfComposer({ openTipsDialog }: { openTipsDialog: (onConfirm?: (
                     <div key={id} className="group/source-doc relative">
                        <div className="mb-2 flex items-center justify-between">
                         <h3 className="font-semibold text-foreground">{filename}</h3>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 transition-opacity group-hover/source-doc:opacity-100"
-                          onClick={() => deleteSourceDoc(id)}
-                          aria-label={`Delete ${filename}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
+                           <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7"
+                              onClick={() => addAllPagesFromSource(id)}
+                              aria-label={`Add all pages from ${filename}`}
+                            >
+                              <PlusSquare className="mr-2 h-4 w-4" />
+                              Add All
+                            </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => deleteSourceDoc(id)}
+                            aria-label={`Delete ${filename}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
                         {Array.from({ length: doc.getPageCount() }).map(
