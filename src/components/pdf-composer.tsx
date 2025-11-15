@@ -180,7 +180,13 @@ function SortableTargetPage({
   );
 }
 
-export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDialog: (onConfirm?: () => void) => void, setDownloadAction: (action: (() => void) | null) => void }) {
+export function PdfComposer({
+  openTipsDialog,
+  setDownloadAction,
+}: {
+  openTipsDialog: (onConfirm?: () => void) => void;
+  setDownloadAction: (action: (() => void) | null) => void;
+}) {
   const [sourceDocs, setSourceDocs] = useState<Record<UniqueId, SourceDoc>>({});
   const [targetPages, setTargetPages] = useState<TargetPage[]>([]);
   const [activeId, setActiveId] = useState<UniqueId | null>(null);
@@ -430,7 +436,7 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
       setDownloadAction(() => () => proceedToDownload());
-      openTipsDialog();
+      openTipsDialog(() => proceedToDownload());
     } else {
        toast({
         variant: "destructive",
@@ -542,7 +548,7 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
                   Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                     <div key={id} className="group/source-doc relative">
                        <div className="mb-2 flex items-center justify-between">
-                        <h3 className="font-semibold text-foreground">{filename}</h3>
+                        <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                         <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
                            <Button variant="ghost" size="sm" className="h-7"
                               onClick={() => addAllPagesFromSource(id)}
@@ -664,3 +670,5 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
     </DndContext>
   );
 }
+
+    
