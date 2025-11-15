@@ -548,7 +548,7 @@ export function PdfComposer({
                   Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                     <div key={id} className="group/source-doc relative">
                        <div className="mb-2 flex items-center justify-between">
-                        <h3 className="font-medium text-sm text-foreground">{filename}</h3>
+                        <h3 className="font-medium text-xs text-foreground">{filename}</h3>
                         <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
                            <Button variant="ghost" size="sm" className="h-7"
                               onClick={() => addAllPagesFromSource(id)}

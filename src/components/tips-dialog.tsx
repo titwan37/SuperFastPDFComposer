@@ -35,22 +35,22 @@ export function TipsDialog({
           💙 Thanks — every contribution counts! 🙌
           </DialogDescription>
         </DialogHeader>
-        <div>
+        <div className="space-y-2">
           {/* Buy Me a Coffee Card */}
           <Card className="mb-2">
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle className="text-md">Drop a tip via 'Buy Me a Coffee'</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
               <div className="flex flex-col items-center justify-center space-y-2">
                  {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or click the buttonto leave a tip.</p> */}
                  <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-2">
-                    <Image src="/bmc_qrcode.png" alt="Buy Me a Coffee QR Code" data-ai-hint="qr code" width={130} height={130} />
+                    <Image src="/bmc_qrcode.png" alt="Buy Me a Coffee QR Code" data-ai-hint="qr code" width={100} height={100} />
                   </div>
                   <div className="flex w-full flex-row items-center justify-center gap-2">
                   <div className="grid grid-rows-2 justify-center gap-2">
-                    <Coffee className="h-16 w-16 justify-center text-yellow-500" />
+                    <Coffee className="h-12 w-12 justify-center text-yellow-500" />
                     <Button asChild className="bg-yellow-500 text-white hover:bg-yellow-600">
                       <a href="https://buymeacoffee.com/titwan" target="_blank" rel="noopener noreferrer">
                         Buy Me a Coffee
@@ -64,15 +64,15 @@ export function TipsDialog({
           </Card>
           {/* PayPal Card */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle className="text-md">Drop a tip via PayPal</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
               <div className="flex flex-col items-center justify-center space-y-2">
                 {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or use a quick link.</p> */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-2">
-                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={130} height={130} />
+                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={100} height={100} />
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <Button variant="outline" asChild>
