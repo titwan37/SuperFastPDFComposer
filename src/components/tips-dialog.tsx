@@ -35,9 +35,9 @@ export function TipsDialog({
           💙 Thanks — every contribution counts! 🙌
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 gap-1">
+        <div>
           {/* Buy Me a Coffee Card */}
-          <Card>
+          <Card className="mb-2">
             <CardHeader>
               <CardTitle className="text-md">Drop a tip via 'Buy Me a Coffee'</CardTitle>
             </CardHeader>
@@ -72,7 +72,7 @@ export function TipsDialog({
                 {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or use a quick link.</p> */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-2">
-                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={150} height={150} />
+                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={180} height={180} />
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <Button variant="outline" asChild>
