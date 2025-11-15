@@ -28,7 +28,7 @@ export function TipsDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Thank you for supporting PDF Composer!</DialogTitle>
+          <DialogTitle>Support 'SuperFast PDF Composer'!</DialogTitle>
           <DialogDescription>
           🎉 Love 'SuperFast PDF Composer'?
           A quick tip ☕ ($1–5) helps keep it free, fast, and ad-free — for everyone.
