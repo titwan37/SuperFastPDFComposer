@@ -429,7 +429,7 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
 
   const handleDownloadClick = () => {
     if (targetPages.length > 0) {
-      setDownloadAction(() => proceedToDownload);
+      setDownloadAction(() => () => proceedToDownload());
       openTipsDialog();
     } else {
        toast({
@@ -516,7 +516,10 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
         <Card className="flex flex-col">
           <CardHeader>
              <div className="mb-2 flex items-center justify-between">
-                <CardTitle>Source Documents</CardTitle>
+                 <CardTitle>Source Documents</CardTitle>
+                 <caption className="text-xs border-dashed text-center text-muted-foreground transition-colors">
+                  Click "Add PDF" to load as many as you need. Select the pages you want to add to the new document.
+                </caption>
             </div>
             <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
@@ -584,7 +587,9 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
         <Card className="flex flex-col">
           <CardHeader>
              <div className="mb-2 flex items-center justify-between">
-                <CardTitle>New Document</CardTitle>
+               <h3 className="font-headline text-xl font-extrabold tracking-tight text-primary sm:text-xl lg:text-2xl">
+                  <CardTitle>New Document</CardTitle>
+              </h3>
             </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">

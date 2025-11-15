@@ -30,7 +30,9 @@ export function TipsDialog({
         <DialogHeader>
           <DialogTitle>Thank you for supporting PDF Composer!</DialogTitle>
           <DialogDescription>
-          Enjoying this free tool? Support us to help keep it available for everyone.
+          🎉 Love 'SuperFast PDF Composer'?
+          A quick tip ☕ ($1–5) helps keep it free, fast, and ad-free — for everyone.
+          💙 Thanks — every contribution counts! 🙌
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-1">
