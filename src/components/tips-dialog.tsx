@@ -42,13 +42,13 @@ export function TipsDialog({
               <CardTitle className="text-md">Drop a tip via 'Buy Me a Coffee'</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center space-y-2 pt-2">
+              <div className="flex flex-col items-center justify-center space-y-2">
                  {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or click the buttonto leave a tip.</p> */}
                  <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-2">
                     <Image src="/bmc_qrcode.png" alt="Buy Me a Coffee QR Code" data-ai-hint="qr code" width={130} height={130} />
                   </div>
-                  <div className="flex w-full flex-row items-center justify-center gap-2 pt-4">
+                  <div className="flex w-full flex-row items-center justify-center gap-2">
                   <div className="grid grid-rows-2 justify-center gap-2">
                     <Coffee className="h-16 w-16 justify-center text-yellow-500" />
                     <Button asChild className="bg-yellow-500 text-white hover:bg-yellow-600">
@@ -72,7 +72,7 @@ export function TipsDialog({
                 {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or use a quick link.</p> */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-2">
-                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={180} height={180} />
+                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={130} height={130} />
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <Button variant="outline" asChild>
