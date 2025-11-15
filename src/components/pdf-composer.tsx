@@ -517,14 +517,15 @@ export function PdfComposer({ openTipsDialog, setDownloadAction }: { openTipsDia
           <CardHeader>
              <div className="mb-2 flex items-center justify-between">
                  <CardTitle>Source Documents</CardTitle>
-                 <caption className="text-xs border-dashed text-center text-muted-foreground transition-colors">
-                  Click "Add PDF" to load as many as you need. Select the pages you want to add to the new document.
-                </caption>
             </div>
             <div className="flex items-center justify-between">
               <Button onClick={() => sourceFileInputRef.current?.click()}>
                 <Plus className="mr-2 h-4 w-4" /> Add PDF
               </Button>
+              <div className="text-xs border-dashed text-center text-muted-foreground">
+                  Click "Add PDF" to load as many as you need.
+                  Select, double-click the pages you want to add to the new document.
+              </div>
             </div>
             <input
               type="file"

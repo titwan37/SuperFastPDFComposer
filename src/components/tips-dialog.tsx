@@ -26,7 +26,7 @@ export function TipsDialog({
   }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Thank you for supporting PDF Composer!</DialogTitle>
           <DialogDescription>

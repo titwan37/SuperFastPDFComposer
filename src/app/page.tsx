@@ -43,7 +43,7 @@ export default function Home() {
             <h1 className="font-headline text-xl font-extrabold tracking-tight text-primary sm:text-xl lg:text-2xl">
              SuperFast PDF Composer
             </h1>
-            <p className="mx-auto mt-2 max-w-xl text-xs text-muted-foreground">
+            <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
               Load and compose visually your new PDF document.
               Select, double-click, reorder, drag-and-drop, delete, add all.   
               All processing is done securely in your new browser.
