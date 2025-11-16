@@ -35,7 +35,9 @@ export default function Home() {
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center bg-background p-4 pt-12 font-body text-foreground md:p-8 md:pt-16"
+      <main className="flex min-h-screen flex-col 
+      items-center bg-background p-4 pt-12 
+      font-body text-foreground md:p-8 md:pt-16"
         suppressHydrationWarning >
         <div className="w-full max-w-screen-2xl">
           <PageHeader />
@@ -46,8 +48,8 @@ export default function Home() {
             <ChevronsDown className="h-8 w-8 animate-bounce-y text-primary/70" />
           </div>
         )}
-      </main>
       <PageFooter openTipsDialog={openTipsDialog} />
+      </main>
       <Toaster />
        <TipsDialog
         isOpen={isTipsDialogOpen}

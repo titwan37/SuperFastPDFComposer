@@ -547,20 +547,20 @@ export function PdfComposer({
                   Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                     <div key={id} className="group/source-doc relative">
                        <div className="mb-2 flex items-center justify-between">
-                        <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                         <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
-                           <Button variant="ghost" size="sm" className="h-7"
-                              onClick={() => addAllPagesFromSource(id)}
-                              aria-label={`Add all pages from ${filename}`}>
-                              <PlusSquare className="mr-2 h-4 w-4" />
-                              Add All
-                            </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7"
-                            onClick={() => deleteSourceDoc(id)}
-                            aria-label={`Delete ${filename}`}>
-                            <X className="h-4 w-4" />
+                              onClick={() => deleteSourceDoc(id)}
+                              aria-label={`Delete ${filename}`}>
+                              <X className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7"
+                            onClick={() => addAllPagesFromSource(id)}
+                            aria-label={`Add all pages from ${filename}`}>
+                            <PlusSquare className="mr-2 h-4 w-4" />
+                            Add All
                           </Button>
                         </div>
+                        <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                       </div>
                       <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
                         {Array.from({ length: doc.getPageCount() }).map(
@@ -593,17 +593,12 @@ export function PdfComposer({
         <Card className="flex flex-col">
           <CardHeader>
              <div className="mb-2 flex items-center justify-between">
-               <h3 className="font-headline text-xl font-extrabold tracking-tight text-primary sm:text-xl lg:text-2xl">
-                  <CardTitle>New Document</CardTitle>
-              </h3>
+                <CardTitle>New Document</CardTitle>
             </div>
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Load
-                  </Button>
-                  <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Clear
+                    <Upload className="mr-2 h-4 w-4" /> Load Base
                   </Button>
                   <input
                     type="file"
@@ -619,6 +614,9 @@ export function PdfComposer({
                       <Download className="mr-2 h-4 w-4" />
                     )}
                     Download
+                  </Button>
+                  <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear
                   </Button>
                 </div>
               </div>
@@ -669,3 +667,5 @@ export function PdfComposer({
     </DndContext>
   );
 }
+
+    
