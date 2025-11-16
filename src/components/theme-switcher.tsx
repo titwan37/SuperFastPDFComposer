@@ -17,8 +17,8 @@ export function ThemeSwitcher() {
       setTheme(storedTheme);
     } else {
       const hour = new Date().getHours();
-      // Set dark theme from 6 PM to 6 AM
-      const isNight = hour < 6 || hour >= 18;
+      // Set dark theme from 6 PM to 8 AM
+      const isNight = hour < 8 || hour >= 18;
       const initialTheme = isNight ? "dark" : "light";
       setTheme(initialTheme);
     }
