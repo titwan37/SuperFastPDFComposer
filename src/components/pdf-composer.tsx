@@ -33,6 +33,8 @@ import {
   Plus,
   X,
   PlusSquare,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,6 +208,7 @@ export function PdfComposer({
   const [activeId, setActiveId] = useState<UniqueId | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [sourceThumbnailScale, setSourceThumbnailScale] = useState(1);
 
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const targetFileInputRef = useRef<HTMLInputElement>(null);
@@ -539,6 +542,25 @@ export function PdfComposer({
             <CardHeader>
               <div className="mb-2 flex items-center justify-between">
                 <CardTitle>Source Documents</CardTitle>
+                <div className="flex items-center gap-2">
+                   <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setSourceThumbnailScale(s => Math.max(0.5, s - 0.1))} disabled={sourceThumbnailScale <= 0.5}>
+                          <ZoomOut className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Zoom Out</p></TooltipContent>
+                  </Tooltip>
+                  <span className="text-sm font-medium w-12 text-center">{Math.round(sourceThumbnailScale * 100)}%</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setSourceThumbnailScale(s => Math.min(2, s + 0.1))} disabled={sourceThumbnailScale >= 2}>
+                          <ZoomIn className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Zoom In</p></TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <Tooltip>
@@ -600,7 +622,12 @@ export function PdfComposer({
                           </div>
                           <h3 className="font-small text-xs text-foreground">{filename}</h3>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                        <div
+                          className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                          style={{
+                              gridTemplateColumns: `repeat(auto-fill, minmax(calc(6rem * ${sourceThumbnailScale}), 1fr))`
+                          }}
+                          >
                             {Array.from({ length: doc.getPageCount() }).map(
                                 (_, i) => (
                                 <DraggableSourcePage 
@@ -639,7 +666,7 @@ export function PdfComposer({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                          <Upload className="mr-2 h-4 w-4" />Load
+                          <Upload className="mr-2 h-4 w-4" />Load Base
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
