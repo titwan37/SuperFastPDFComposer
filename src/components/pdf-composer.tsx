@@ -41,6 +41,13 @@ import type { SourceDoc, TargetPage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 // pdf.js worker configuration
 if (typeof window !== "undefined") {
@@ -510,162 +517,176 @@ export function PdfComposer({
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Source Pane */}
-        <Card className="flex flex-col">
-          <CardHeader>
-             <div className="mb-2 flex items-center justify-between">
-                 <CardTitle>Source Documents</CardTitle>
-            </div>
-            <div className="flex items-center justify-between">
-              <Button onClick={() => sourceFileInputRef.current?.click()}>
-                <Plus className="mr-2 h-4 w-4" /> Add PDF
-              </Button>
-              <div className="text-xs border-dashed text-center text-muted-foreground">
-                  Click "Add PDF" to load as many as you need.
-                  Select, double-click the pages you want to add to the new document.
+    <TooltipProvider>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Source Pane */}
+          <Card className="flex flex-col">
+            <CardHeader>
+              <div className="mb-2 flex items-center justify-between">
+                <CardTitle>Source Documents</CardTitle>
               </div>
-            </div>
-            <input
-              type="file"
-              ref={sourceFileInputRef}
-              onChange={(e) => handleFileUpload(e, "source")}
-              className="hidden"
-              accept="application/pdf"
-            />
-          </CardHeader>
-          <CardContent className="flex-grow">
-            <ScrollArea className="h-[52vh] rounded-md border p-4">
-              <div className="space-y-6">
-                {Object.keys(sourceDocs).length > 0 ? (
-                  Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
-                    <div key={id} className="group/source-doc relative">
-                       <div className="mb-2 flex items-center justify-between">
-                        <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
-                          <Button variant="ghost" size="icon" className="h-7 w-7"
-                              onClick={() => deleteSourceDoc(id)}
-                              aria-label={`Delete ${filename}`}>
-                              <X className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-7"
-                            onClick={() => addAllPagesFromSource(id)}
-                            aria-label={`Add all pages from ${filename}`}>
-                            <PlusSquare className="mr-2 h-4 w-4" />
-                            Add All
-                          </Button>
-                        </div>
-                        <h3 className="font-medium text-sm text-foreground">{filename}</h3>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-                        {Array.from({ length: doc.getPageCount() }).map(
-                          (_, i) => (
-                            <DraggableSourcePage 
-                              key={`${id}-${i}`} 
-                              docId={id} 
-                              pageIndex={i}
-                              thumbnailUrl={thumbnailUrls?.[i]}
-                              onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
-                            />
-                          )
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-                    <Upload className="mb-4 h-12 w-12" />
-                    <p className="font-semibold">Upload a source PDF</p>
-                    <p className="text-sm">Click "Add PDF" to get started.</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Target Pane */}
-        <Card className="flex flex-col">
-          <CardHeader>
-             <div className="mb-2 flex items-center justify-between">
-                <CardTitle>New Document</CardTitle>
-            </div>
               <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Load Base
-                  </Button>
-                  <input
-                    type="file"
-                    ref={targetFileInputRef}
-                    onChange={(e) => handleFileUpload(e, "target")}
-                    className="hidden"
-                    accept="application/pdf"
-                  />
-                  <Button onClick={handleDownloadClick} disabled={isLoading || targetPages.length === 0}>
-                    {isLoading ? (
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    Download
-                  </Button>
-                  <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Clear
-                  </Button>
+                <Button onClick={() => sourceFileInputRef.current?.click()}>
+                  <Plus className="mr-2 h-4 w-4" /> Add PDF
+                </Button>
+                <div className="text-xs border-dashed text-center text-muted-foreground">
+                    Click "Add PDF" to load as many as you need.
+                    Select, double-click the pages you want to add to the new document.
                 </div>
               </div>
-          </CardHeader>
-          <CardContent className="flex-grow">
-            <SortableContext items={targetPages.map(p => p.id)} strategy={rectSortingStrategy}>
-              <ScrollArea className="h-[52vh] rounded-md border">
-                <div ref={setDroppableNodeRef} className="h-full p-4">
-                  {targetPages.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-                      {targetPages.map((page, index) => (
-                        <SortableTargetPage
-                          key={page.id}
-                          id={page.id}
-                          pageNumber={index + 1}
-                          thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
-                          onDelete={deleteTargetPage}
-                        />
-                      ))}
-                    </div>
+              <input
+                type="file"
+                ref={sourceFileInputRef}
+                onChange={(e) => handleFileUpload(e, "source")}
+                className="hidden"
+                accept="application/pdf"
+              />
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <ScrollArea className="h-[52vh] rounded-md border p-4">
+                <div className="space-y-6">
+                  {Object.keys(sourceDocs).length > 0 ? (
+                    Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
+                      <div key={id} className="group/source-doc relative">
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7"
+                                    onClick={() => deleteSourceDoc(id)}
+                                    aria-label={`Delete ${filename}`}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete document</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7"
+                                  onClick={() => addAllPagesFromSource(id)}
+                                  aria-label={`Add all pages from ${filename}`}>
+                                  <PlusSquare className="mr-2 h-4 w-4" />
+                                  Add All
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Add all pages to new document</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <h3 className="font-medium text-sm text-foreground">{filename}</h3>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+                          {Array.from({ length: doc.getPageCount() }).map(
+                            (_, i) => (
+                              <DraggableSourcePage 
+                                key={`${id}-${i}`} 
+                                docId={id} 
+                                pageIndex={i}
+                                thumbnailUrl={thumbnailUrls?.[i]}
+                                onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
+                              />
+                            )
+                          )}
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <div className={cn(
-                      "flex h-full min-h-[10rem] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
-                      isOver ? "border-primary bg-accent/10" : ""
-                    )}>
-                      <p className="font-semibold">Drag pages here</p>
-                      <p className="text-sm">or load a base PDF to start.</p>
+                    <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
+                      <Upload className="mb-4 h-12 w-12" />
+                      <p className="font-semibold">Upload a source PDF</p>
+                      <p className="text-sm">Click "Add PDF" to get started.</p>
                     </div>
                   )}
                 </div>
               </ScrollArea>
-            </SortableContext>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
 
-      <DragOverlay>
-        {activeId ? (
-          <div className="w-32">
-             <PageThumbnail 
-                pageNumber={getActivePageData().pageNumber}
-                thumbnailUrl={getActivePageData().thumbnailUrl}
-                isOverlay 
-              />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+          {/* Target Pane */}
+          <Card className="flex flex-col">
+            <CardHeader>
+              <div className="mb-2 flex items-center justify-between">
+                <CardTitle>New Document</CardTitle>
+              </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
+                      <Upload className="mr-2 h-4 w-4" /> Load Base
+                    </Button>
+                    <input
+                      type="file"
+                      ref={targetFileInputRef}
+                      onChange={(e) => handleFileUpload(e, "target")}
+                      className="hidden"
+                      accept="application/pdf"
+                    />
+                    <Button onClick={handleDownloadClick} disabled={isLoading || targetPages.length === 0}>
+                      {isLoading ? (
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      Download
+                    </Button>
+                    <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Clear
+                    </Button>
+                  </div>
+                </div>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <SortableContext items={targetPages.map(p => p.id)} strategy={rectSortingStrategy}>
+                <ScrollArea className="h-[52vh] rounded-md border">
+                  <div ref={setDroppableNodeRef} className="h-full p-4">
+                    {targetPages.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+                        {targetPages.map((page, index) => (
+                          <SortableTargetPage
+                            key={page.id}
+                            id={page.id}
+                            pageNumber={index + 1}
+                            thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
+                            onDelete={deleteTargetPage}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={cn(
+                        "flex h-full min-h-[10rem] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
+                        isOver ? "border-primary bg-accent/10" : ""
+                      )}>
+                        <p className="font-semibold">Drag pages here</p>
+                        <p className="text-sm">or load a base PDF to start.</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </SortableContext>
+            </CardContent>
+          </Card>
+        </div>
+
+        <DragOverlay>
+          {activeId ? (
+            <div className="w-32">
+              <PageThumbnail 
+                  pageNumber={getActivePageData().pageNumber}
+                  thumbnailUrl={getActivePageData().thumbnailUrl}
+                  isOverlay 
+                />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </TooltipProvider>
   );
 }
-
-    
