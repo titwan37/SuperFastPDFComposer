@@ -7,6 +7,7 @@ import { TipsDialog } from "@/components/tips-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronsDown } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { PageFooter } from "@/components/page-footer";
 
 export default function Home() {
   const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
@@ -46,24 +47,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer
-        className="w-full p-4 text-center text-sm text-muted-foreground"
-        suppressHydrationWarning
-      >
-        <p>
-          Created on Firebase Studio.{" | "}
-          <button onClick={() => openTipsDialog()}
-            className="text-primary underline-offset-4 hover:underline">
-           Give me tips
-           </button>
-           {" | "}
-          Credits: Antoine Falempin.{" "}
-          <a href="mailto:titwan.jobs@gmail.com"
-            className="text-primary underline-offset-4 hover:underline">
-            Contact
-          </a>
-        </p>
-      </footer>
+      <PageFooter openTipsDialog={openTipsDialog} />
       <Toaster />
        <TipsDialog
         isOpen={isTipsDialogOpen}
