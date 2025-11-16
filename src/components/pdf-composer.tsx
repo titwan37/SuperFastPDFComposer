@@ -50,8 +50,11 @@ import {
 
 
 // pdf.js worker configuration
-if (typeof window !== "undefined") {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).toString();
 }
 
 type UniqueId = string;
@@ -213,7 +216,7 @@ export function PdfComposer({
   const renderPdfPage = async (
     pdfDoc: pdfjs.PDFDocumentProxy,
     pageNumber: number
-  ): Promise<string> => {
+  ): Promise<string> => {    
     const page = await pdfDoc.getPage(pageNumber);
     const viewport = page.getViewport({ scale: 0.5 });
     const canvas = document.createElement("canvas");
