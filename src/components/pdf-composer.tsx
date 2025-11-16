@@ -210,14 +210,11 @@ export function PdfComposer({
   const { toast } = useToast();
   const [sourceThumbnailScale, setSourceThumbnailScale] = useState(1);
   const [targetThumbnailScale, setTargetThumbnailScale] = useState(1);
-
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const targetFileInputRef = useRef<HTMLInputElement>(null);
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
+      activationConstraint: { distance: 8,
       },
     })
   );
@@ -232,16 +229,13 @@ export function PdfComposer({
     const context = canvas.getContext("2d");
     canvas.height = viewport.height;
     canvas.width = viewport.width;
-
     if (!context) {
       throw new Error("Could not get canvas context");
     }
-
     const renderContext = {
       canvasContext: context,
       viewport: viewport,
     };
-
     await page.render(renderContext).promise;
     return canvas.toDataURL();
   };
@@ -265,18 +259,15 @@ export function PdfComposer({
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const docId = getUniqueId();
-
       // For rendering thumbnails
       const pdfjsDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       const pageCount = pdfjsDoc.numPages;
-
       const newSourceDoc: SourceDoc = {
         id: docId,
         doc: pdfDoc,
         filename: file.name,
         thumbnailUrls: Array(pageCount).fill(undefined),
       };
-
       setSourceDocs((prev) => ({ ...prev, [docId]: newSourceDoc }));
       
       if (pane === "target") {
@@ -289,7 +280,6 @@ export function PdfComposer({
         );
         setTargetPages(pages => [...pages, ...newTargetPages]);
       }
-
       toast({
         title: "PDF Loaded",
         description: `"${file.name}" has been loaded successfully.`,
@@ -353,16 +343,12 @@ export function PdfComposer({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-  
     if (!over) return;
-  
     const activeIdStr = active.id as UniqueId;
     const overIdStr = over.id as UniqueId;
-  
     const activeIsTarget = active.data.current?.from === 'target';
     const overIsTargetArea = over.id === 'target-droppable-area';
     const overIsTargetItem = over.data.current?.from === 'target';
-  
     // Scenario 1: Reordering within the target pane
     if (activeIsTarget && overIsTargetItem) {
         if (activeIdStr !== overIdStr) {
@@ -385,7 +371,6 @@ export function PdfComposer({
         docId: docId,
         originalPageIndex: pageIndex,
       };
-  
       setTargetPages((pages) => {
         if (overIsTargetItem) {
           const overIndex = pages.findIndex((p) => p.id === overIdStr);
@@ -537,12 +522,12 @@ export function PdfComposer({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {/* Source Pane */}
           <Card className="flex flex-col">
-            <CardHeader>
+            <CardHeader className="p-4 pb-2">
               <div className="mb-2 flex items-center justify-between">
-                <CardTitle>Source Documents</CardTitle>
+                <CardTitle>Source Docs</CardTitle>
                 <div className="flex items-center gap-2">
                    <Tooltip>
                     <TooltipTrigger asChild>
@@ -587,9 +572,9 @@ export function PdfComposer({
                 accept="application/pdf"
               />
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="flex-grow p-4">
               <ScrollArea className="h-[52vh] rounded-md border p-4">
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {Object.keys(sourceDocs).length > 0 ? (
                     Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                       <div key={id} className="group/source-doc relative space-y-2">
@@ -657,9 +642,9 @@ export function PdfComposer({
 
           {/* Target Pane */}
           <Card className="flex flex-col">
-            <CardHeader>
+            <CardHeader className="p-4 pb-2">
                 <div className="mb-2 flex items-center justify-between">
-                 <CardTitle>New Document</CardTitle>
+                 <CardTitle>Target Doc</CardTitle>
                  <div className="flex items-center gap-2">
                    <Tooltip>
                     <TooltipTrigger asChild>
@@ -686,7 +671,7 @@ export function PdfComposer({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                          <Upload className="mr-2 h-4 w-4" />Load Base
+                          <Upload className="mr-2 h-4 w-4" />Load
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -720,7 +705,7 @@ export function PdfComposer({
                   </div>
                 </div>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="flex-grow p-4">
               <SortableContext items={targetPages.map(p => p.id)} strategy={rectSortingStrategy}>
                 <ScrollArea className="h-[52vh] rounded-md border">
                   <div ref={setDroppableNodeRef} className="h-full p-4">
@@ -770,3 +755,5 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
