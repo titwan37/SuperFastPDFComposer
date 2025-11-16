@@ -526,9 +526,9 @@ export function PdfComposer({
           {/* Source Pane */}
           <Card className="flex flex-col">
             <CardHeader className="p-4 pb-2">
-              <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <CardTitle>Source Docs</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                    <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setSourceThumbnailScale(s => Math.max(0.5, s - 0.1))} disabled={sourceThumbnailScale <= 0.5}>
@@ -537,7 +537,7 @@ export function PdfComposer({
                     </TooltipTrigger>
                     <TooltipContent><p>Zoom Out</p></TooltipContent>
                   </Tooltip>
-                  <span className="text-sm font-medium w-12 text-center">{Math.round(sourceThumbnailScale * 100)}%</span>
+                  <span className="w-12 text-center text-sm font-medium">{Math.round(sourceThumbnailScale * 100)}%</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setSourceThumbnailScale(s => Math.min(2, s + 0.1))} disabled={sourceThumbnailScale >= 2}>
@@ -548,7 +548,7 @@ export function PdfComposer({
                   </Tooltip>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
                   <Button onClick={() => sourceFileInputRef.current?.click()}>
@@ -559,10 +559,9 @@ export function PdfComposer({
                     <p>Add PDF document in the source documents list.</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-xs border-dashed text-center text-muted-foreground">
-                    Click "Add PDF" to load as many documents as you need.
-                    Select, double-click the pages you want to compose the new one.
-                </div>
+                <p className="flex-grow text-right text-xs text-muted-foreground">
+                    Double-click or drag pages to compose.
+                </p>
               </div>
               <input
                 type="file"
@@ -643,9 +642,9 @@ export function PdfComposer({
           {/* Target Pane */}
           <Card className="flex flex-col">
             <CardHeader className="p-4 pb-2">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                  <CardTitle>Target Doc</CardTitle>
-                 <div className="flex items-center gap-2">
+                 <div className="flex shrink-0 items-center gap-2">
                    <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setTargetThumbnailScale(s => Math.max(0.5, s - 0.1))} disabled={targetThumbnailScale <= 0.5}>
@@ -654,7 +653,7 @@ export function PdfComposer({
                     </TooltipTrigger>
                     <TooltipContent><p>Zoom Out</p></TooltipContent>
                   </Tooltip>
-                  <span className="text-sm font-medium w-12 text-center">{Math.round(targetThumbnailScale * 100)}%</span>
+                  <span className="w-12 text-center text-sm font-medium">{Math.round(targetThumbnailScale * 100)}%</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setTargetThumbnailScale(s => Math.min(2, s + 0.1))} disabled={targetThumbnailScale >= 2}>
@@ -665,9 +664,8 @@ export function PdfComposer({
                   </Tooltip>
                 </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex shrink-0 gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
@@ -703,6 +701,9 @@ export function PdfComposer({
                       </TooltipContent>
                     </Tooltip>                    
                   </div>
+                  <p className="flex-grow text-right text-xs text-muted-foreground">
+                    Drag pages here or reorder them.
+                  </p>
                 </div>
             </CardHeader>
             <CardContent className="flex-grow p-4">
@@ -755,5 +756,3 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
-
-    
