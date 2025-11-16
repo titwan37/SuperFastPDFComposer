@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TipsDialog } from "@/components/tips-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronsDown } from "lucide-react";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function Home() {
   const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
@@ -39,13 +40,16 @@ export default function Home() {
         suppressHydrationWarning
       >
         <div className="w-full max-w-screen-2xl">
-          <header className="mb-8 text-center">
+          <header className="relative mb-8 text-center">
             <h1 className="font-headline text-3xl font-extrabold tracking-tight text-primary sm:text-4xl lg:text-5xl">
              SuperFast PDF Composer
             </h1>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
               Visually compose your new PDF. Drag, drop, reorder, and merge pages from multiple documents right in your browser.
             </p>
+            <div className="absolute right-0 top-0">
+              <ThemeSwitcher />
+            </div>
           </header>
           <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />
         </div>
