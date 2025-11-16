@@ -51,8 +51,9 @@ import {
 
 // pdf.js worker configuration
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 }
+
 
 type UniqueId = string;
 
@@ -72,7 +73,7 @@ function PageThumbnail({
   return (
     <div
       className={cn(
-        "flex aspect-[7/9] flex-col items-center justify-center rounded-lg border-2 bg-card shadow-sm transition-shadow",
+        "relative flex aspect-[7/9] w-full flex-col items-center justify-center overflow-hidden rounded-lg border-2 bg-card shadow-sm transition-shadow",
         isOverlay
           ? "border-primary shadow-lg"
           : "border-border group-hover:border-primary/50 group-hover:shadow-md"
@@ -82,7 +83,7 @@ function PageThumbnail({
         <img
           src={thumbnailUrl}
           alt={`Page ${pageNumber}`}
-          className="h-full w-full rounded-md object-cover"
+          className="h-full w-full object-cover"
         />
       ) : thumbnailUrl === null ? (
         <>
@@ -94,9 +95,14 @@ function PageThumbnail({
       ) : (
         <Skeleton className="h-full w-full" />
       )}
+       <div className="absolute bottom-1 left-1 rounded-sm bg-black/50 px-1.5 py-0.5 text-xs font-medium text-white">
+        {pageNumber}
+      </div>
     </div>
   );
 }
+
+
 
 // Sub-component for a draggable page in the source pane
 function DraggableSourcePage({
@@ -564,7 +570,6 @@ export function PdfComposer({
                     Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                       <div key={id} className="group/source-doc relative space-y-2">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                           <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -592,6 +597,7 @@ export function PdfComposer({
                               </TooltipContent>
                             </Tooltip>
                           </div>
+                          <h3 className="font-small text-xs text-foreground">{filename}</h3>
                         </div>
                         <ScrollArea className="w-full whitespace-nowrap">
                             <div className="flex w-max space-x-4 pb-4">
@@ -635,7 +641,7 @@ export function PdfComposer({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                          <Upload className="mr-2 h-4 w-4" />Load Base
+                          <Upload className="mr-2 h-4 w-4" />Load
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -716,6 +722,8 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
 
     
 
