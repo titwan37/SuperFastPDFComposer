@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { SourceDoc, TargetPage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -51,10 +51,7 @@ import {
 
 // pdf.js worker configuration
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-  ).toString();
+  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 }
 
 type UniqueId = string;
@@ -75,7 +72,7 @@ function PageThumbnail({
   return (
     <div
       className={cn(
-        "flex aspect-[7/9] w-full flex-col items-center justify-center rounded-lg border-2 bg-card shadow-sm transition-shadow",
+        "flex aspect-[7/9] flex-col items-center justify-center rounded-lg border-2 bg-card shadow-sm transition-shadow",
         isOverlay
           ? "border-primary shadow-lg"
           : "border-border group-hover:border-primary/50 group-hover:shadow-md"
@@ -124,11 +121,13 @@ function DraggableSourcePage({
   });
 
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} className="group cursor-grab touch-none" onDoubleClick={onDoubleClick}>
-      <PageThumbnail
-        pageNumber={pageIndex + 1}
-        thumbnailUrl={thumbnailUrl}
-      />
+    <div className="w-24 flex-shrink-0">
+        <div ref={setNodeRef} {...listeners} {...attributes} className="group cursor-grab touch-none" onDoubleClick={onDoubleClick}>
+        <PageThumbnail
+            pageNumber={pageIndex + 1}
+            thumbnailUrl={thumbnailUrl}
+        />
+        </div>
     </div>
   );
 }
@@ -535,12 +534,19 @@ export function PdfComposer({
                 <CardTitle>Source Documents</CardTitle>
               </div>
               <div className="flex items-center justify-between">
-                <Button onClick={() => sourceFileInputRef.current?.click()}>
-                  <Plus className="mr-2 h-4 w-4" /> Add PDF
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                  <Button onClick={() => sourceFileInputRef.current?.click()}>
+                    <Plus className="mr-2 h-4 w-4" /> Add PDF
+                  </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add PDF document in the source documents list.</p>
+                  </TooltipContent>
+                </Tooltip>
                 <div className="text-xs border-dashed text-center text-muted-foreground">
-                    Click "Add PDF" to load as many as you need.
-                    Select, double-click the pages you want to add to the new document.
+                    Click "Add PDF" to load as many documents as you need.
+                    Select, double-click the pages you want to compose the new one.
                 </div>
               </div>
               <input
@@ -556,8 +562,9 @@ export function PdfComposer({
                 <div className="space-y-6">
                   {Object.keys(sourceDocs).length > 0 ? (
                     Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
-                      <div key={id} className="group/source-doc relative">
-                        <div className="mb-2 flex items-center justify-between">
+                      <div key={id} className="group/source-doc relative space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                           <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -585,21 +592,23 @@ export function PdfComposer({
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                          <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-                          {Array.from({ length: doc.getPageCount() }).map(
-                            (_, i) => (
-                              <DraggableSourcePage 
-                                key={`${id}-${i}`} 
-                                docId={id} 
-                                pageIndex={i}
-                                thumbnailUrl={thumbnailUrls?.[i]}
-                                onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
-                              />
-                            )
-                          )}
-                        </div>
+                        <ScrollArea className="w-full whitespace-nowrap">
+                            <div className="flex w-max space-x-4 pb-4">
+                                {Array.from({ length: doc.getPageCount() }).map(
+                                    (_, i) => (
+                                    <DraggableSourcePage 
+                                        key={`${id}-${i}`} 
+                                        docId={id} 
+                                        pageIndex={i}
+                                        thumbnailUrl={thumbnailUrls?.[i]}
+                                        onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
+                                    />
+                                    )
+                                )}
+                            </div>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
                       </div>
                     ))
                   ) : (
@@ -617,14 +626,22 @@ export function PdfComposer({
           {/* Target Pane */}
           <Card className="flex flex-col">
             <CardHeader>
-              <div className="mb-2 flex items-center justify-between">
-                <CardTitle>New Document</CardTitle>
-              </div>
+                <div className="mb-2 flex items-center justify-between">
+                 <CardTitle>New Document</CardTitle>
+                </div>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                      <Upload className="mr-2 h-4 w-4" /> Load Base
-                    </Button>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
+                          <Upload className="mr-2 h-4 w-4" />Load Base
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Load base document pages to new document.</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <input
                       type="file"
                       ref={targetFileInputRef}
@@ -637,12 +654,18 @@ export function PdfComposer({
                         <Loader className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Download className="mr-2 h-4 w-4" />
-                      )}
-                      Download
+                      )}Download
                     </Button>
-                    <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
-                      <Trash2 className="mr-2 h-4 w-4" /> Clear
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
+                          <Trash2 className="mr-2 h-4 w-4" />Clear
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Clear all pages from new document.</p>
+                      </TooltipContent>
+                    </Tooltip>                    
                   </div>
                 </div>
             </CardHeader>
@@ -693,5 +716,7 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
 
     
