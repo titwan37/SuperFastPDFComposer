@@ -498,8 +498,9 @@ export function PdfComposer({
       originalPageIndex: pageIndex,
     };
     setTargetPages((pages) => [...pages, newPage]);
+    const sourceDoc = sourceDocs[docId];
     toast({
-      title: "Page Added",
+      title: `Page Added from "${sourceDoc?.filename}"`,
       description: `Page ${pageIndex + 1} was added to the new document.`,
     });
   };
