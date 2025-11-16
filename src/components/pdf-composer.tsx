@@ -127,13 +127,13 @@ function DraggableSourcePage({
   });
 
   return (
-    <div className="w-24 flex-shrink-0">
-        <div ref={setNodeRef} {...listeners} {...attributes} className="group cursor-grab touch-none" onDoubleClick={onDoubleClick}>
+    <div className="group cursor-grab touch-none" onDoubleClick={onDoubleClick}>
+      <div ref={setNodeRef} {...listeners} {...attributes}>
         <PageThumbnail
-            pageNumber={pageIndex + 1}
-            thumbnailUrl={thumbnailUrl}
+          pageNumber={pageIndex + 1}
+          thumbnailUrl={thumbnailUrl}
         />
-        </div>
+      </div>
     </div>
   );
 }
@@ -599,22 +599,19 @@ export function PdfComposer({
                           </div>
                           <h3 className="font-small text-xs text-foreground">{filename}</h3>
                         </div>
-                        <ScrollArea className="w-full whitespace-nowrap">
-                            <div className="flex w-max space-x-4 pb-4">
-                                {Array.from({ length: doc.getPageCount() }).map(
-                                    (_, i) => (
-                                    <DraggableSourcePage 
-                                        key={`${id}-${i}`} 
-                                        docId={id} 
-                                        pageIndex={i}
-                                        thumbnailUrl={thumbnailUrls?.[i]}
-                                        onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
-                                    />
-                                    )
-                                )}
-                            </div>
-                            <ScrollBar orientation="horizontal" />
-                        </ScrollArea>
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                            {Array.from({ length: doc.getPageCount() }).map(
+                                (_, i) => (
+                                <DraggableSourcePage 
+                                    key={`${id}-${i}`} 
+                                    docId={id} 
+                                    pageIndex={i}
+                                    thumbnailUrl={thumbnailUrls?.[i]}
+                                    onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
+                                />
+                                )
+                            )}
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -722,6 +719,8 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
 
     
 
