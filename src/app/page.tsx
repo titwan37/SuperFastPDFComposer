@@ -40,13 +40,11 @@ export default function Home() {
       >
         <div className="w-full max-w-screen-2xl">
           <header className="mb-8 text-center">
-            <h1 className="font-headline text-xl font-extrabold tracking-tight text-primary sm:text-xl lg:text-2xl">
+            <h1 className="font-headline text-3xl font-extrabold tracking-tight text-primary sm:text-4xl lg:text-5xl">
              SuperFast PDF Composer
             </h1>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
-              Load and compose visually your new PDF document.
-              Select, double-click, reorder, drag-and-drop, delete, add all.   
-              All processing is done securely in your new browser.
+              Visually compose your new PDF. Drag, drop, reorder, and merge pages from multiple documents right in your browser.
             </p>
           </header>
           <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />
@@ -62,19 +60,17 @@ export default function Home() {
         suppressHydrationWarning
       >
         <p>
-          Created on Firebase Studio. 
-          |{" "}
+          Created on Firebase Studio.{" | "}
           <button onClick={() => openTipsDialog()}
             className="text-primary underline-offset-4 hover:underline">
            Give me tips
            </button>
-           {" "} | {" "}
+           {" | "}
           Credits: Antoine Falempin.{" "}
           <a href="mailto:titwan.jobs@gmail.com"
             className="text-primary underline-offset-4 hover:underline">
             Contact
           </a>
-          {" "}
         </p>
       </footer>
       <Toaster />

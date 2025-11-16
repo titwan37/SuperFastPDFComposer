@@ -41,7 +41,6 @@ import type { SourceDoc, TargetPage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TipsDialog } from "@/components/tips-dialog";
 
 // pdf.js worker configuration
 if (typeof window !== "undefined") {
@@ -548,7 +547,7 @@ export function PdfComposer({
                   Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
                     <div key={id} className="group/source-doc relative">
                        <div className="mb-2 flex items-center justify-between">
-                        <h3 className="font-medium text-xs text-foreground">{filename}</h3>
+                        <h3 className="font-medium text-sm text-foreground">{filename}</h3>
                         <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
                            <Button variant="ghost" size="sm" className="h-7"
                               onClick={() => addAllPagesFromSource(id)}
@@ -601,7 +600,7 @@ export function PdfComposer({
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Load
+                    <Upload className="mr-2 h-4 w-4" /> Load Base
                   </Button>
                   <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" /> Clear
@@ -646,7 +645,7 @@ export function PdfComposer({
                       isOver ? "border-primary bg-accent/10" : ""
                     )}>
                       <p className="font-semibold">Drag pages here</p>
-                      <p className="text-sm">or load a target PDF to edit.</p>
+                      <p className="text-sm">or load a base PDF to start.</p>
                     </div>
                   )}
                 </div>
@@ -670,5 +669,3 @@ export function PdfComposer({
     </DndContext>
   );
 }
-
-    
