@@ -12,8 +12,16 @@ export function ThemeSwitcher() {
 
   useEffect(() => {
     setIsMounted(true);
-    const storedTheme = localStorage.getItem("theme") || "light";
-    setTheme(storedTheme);
+    const storedTheme = localStorage.getItem("theme");
+    if (storedTheme) {
+      setTheme(storedTheme);
+    } else {
+      const hour = new Date().getHours();
+      // Set dark theme from 6 PM to 6 AM
+      const isNight = hour < 6 || hour >= 18;
+      const initialTheme = isNight ? "dark" : "light";
+      setTheme(initialTheme);
+    }
   }, []);
 
   useEffect(() => {
