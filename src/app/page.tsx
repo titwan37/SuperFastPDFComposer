@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -40,15 +39,17 @@ export default function Home() {
         suppressHydrationWarning
       >
         <div className="w-full max-w-screen-2xl">
-          <header className="relative mb-8 text-center">
-            <h1 className="font-headline text-3xl font-extrabold tracking-tight text-primary sm:text-4xl lg:text-5xl">
+          <header className="mb-8">
+            <h1 className="text-center font-headline text-3xl font-extrabold tracking-tight text-primary sm:text-4xl lg:text-5xl">
              SuperFast PDF Composer
             </h1>
-            <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
-              Visually compose your new PDF. Drag, drop, reorder, and merge pages from multiple documents right in your browser.
-            </p>
-            <div className="absolute right-0 top-0">
-              <ThemeSwitcher />
+            <div className="mt-4 flex items-center justify-between">
+              <p className="max-w-xl text-sm text-muted-foreground">
+                Visually compose your new PDF. Drag, drop, reorder, and merge pages from multiple documents right in your browser.
+              </p>
+              <div className="flex-shrink-0">
+                <ThemeSwitcher />
+              </div>
             </div>
           </header>
           <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />

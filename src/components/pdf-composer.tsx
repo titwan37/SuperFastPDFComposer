@@ -600,7 +600,7 @@ export function PdfComposer({
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Load Base
+                    <Upload className="mr-2 h-4 w-4" /> Load
                   </Button>
                   <Button variant="outline" onClick={() => setTargetPages([])} disabled={targetPages.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" /> Clear
