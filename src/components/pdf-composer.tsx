@@ -524,7 +524,7 @@ export function PdfComposer({
       >
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {/* Source Pane */}
-          <Card className="flex flex-col">
+          <Card className="flex flex-col shrink-0 gap-4">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between gap-4">
                 <CardTitle>Source Docs</CardTitle>
@@ -571,7 +571,7 @@ export function PdfComposer({
                 accept="application/pdf"
               />
             </CardHeader>
-            <CardContent className="flex-grow p-4">
+            <CardContent className="flex-grow gap-4 p-4">
               <ScrollArea className="h-[52vh] rounded-md border p-4">
                 <div className="space-y-4">
                   {Object.keys(sourceDocs).length > 0 ? (
@@ -640,12 +640,12 @@ export function PdfComposer({
           </Card>
 
           {/* Target Pane */}
-          <Card className="flex flex-col">
-            <CardHeader className="p-4 pb-2">
+          <Card className="flex flex-col shrink-0 gap-4">
+            <CardHeader className="p-4 pb-2 shrink-0 gap-4">
                 <div className="flex items-center justify-between gap-4">
                  <CardTitle>Target Doc</CardTitle>
                  <div className="flex shrink-0 items-center gap-2">
-                   <Tooltip>
+                  <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setTargetThumbnailScale(s => Math.max(0.5, s - 0.1))} disabled={targetThumbnailScale <= 0.5}>
                           <ZoomOut className="h-4 w-4" />
@@ -664,7 +664,10 @@ export function PdfComposer({
                   </Tooltip>
                 </div>
                 </div>
-                <div className="flex items-center justify-between gap-4">
+                <p className="flex-grow text-right text-xs text-muted-foreground">
+                    Drag pages here or reorder them.
+                </p>
+                <div className="flex shrink-0 items-center justify-between gap-4">
                   <div className="flex shrink-0 gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -701,12 +704,9 @@ export function PdfComposer({
                       </TooltipContent>
                     </Tooltip>                    
                   </div>
-                  <p className="flex-grow text-right text-xs text-muted-foreground">
-                    Drag pages here or reorder them.
-                  </p>
                 </div>
             </CardHeader>
-            <CardContent className="flex-grow p-4">
+            <CardContent className="flex-grow shrink-0 p-4">
               <SortableContext items={targetPages.map(p => p.id)} strategy={rectSortingStrategy}>
                 <ScrollArea className="h-[52vh] rounded-md border">
                   <div ref={setDroppableNodeRef} className="h-full p-4">
