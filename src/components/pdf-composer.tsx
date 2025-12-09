@@ -21,8 +21,8 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PDFDocument } from "pdf-lib";
-import * as pdfjs from "pdfjs-dist";
+import { PDFDocument, rgb, png } from "pdf-lib";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   Upload,
   Download,
@@ -35,6 +35,7 @@ import {
   PlusSquare,
   ZoomIn,
   ZoomOut,
+  PenSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,11 +50,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SignatureDialog } from "./signature-dialog";
 
 
 // pdf.js worker configuration
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
 }
 
 
@@ -112,11 +114,13 @@ function DraggableSourcePage({
   pageIndex,
   thumbnailUrl,
   onDoubleClick,
+  onSign,
 }: {
   docId: UniqueId;
   pageIndex: number;
   thumbnailUrl?: string | null;
   onDoubleClick: () => void;
+  onSign: () => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `source-${docId}-${pageIndex}`,
@@ -129,13 +133,29 @@ function DraggableSourcePage({
   });
 
   return (
-    <div className="group cursor-grab touch-none" onDoubleClick={onDoubleClick}>
+    <div className="group relative cursor-grab touch-none" onDoubleClick={onDoubleClick}>
       <div ref={setNodeRef} {...listeners} {...attributes}>
         <PageThumbnail
           pageNumber={pageIndex + 1}
           thumbnailUrl={thumbnailUrl}
         />
       </div>
+       <Tooltip>
+        <TooltipTrigger asChild>
+            <Button
+                variant="outline"
+                size="icon"
+                className="absolute right-1 top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={onSign}
+                aria-label="Sign page"
+            >
+                <PenSquare className="h-4 w-4" />
+            </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+            <p>Sign this page</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
@@ -212,6 +232,10 @@ export function PdfComposer({
   const [targetThumbnailScale, setTargetThumbnailScale] = useState(1);
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const targetFileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
+  const [signingPageInfo, setSigningPageInfo] = useState<{ docId: UniqueId; pageIndex: number } | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8,
@@ -239,6 +263,23 @@ export function PdfComposer({
     await page.render(renderContext).promise;
     return canvas.toDataURL();
   };
+  
+  const updatePageThumbnail = useCallback(async (docId: string, pageIndex: number) => {
+    const sourceDoc = sourceDocs[docId];
+    if (!sourceDoc) return;
+
+    // Use pdf-lib document to get the latest page data
+    const pdfBytes = await sourceDoc.doc.save();
+    const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
+    const thumbnailUrl = await renderPdfPage(pdfjsDoc, pageIndex + 1);
+
+    setSourceDocs(prev => {
+        const updatedDoc = { ...prev[docId] };
+        if (!updatedDoc) return prev;
+        updatedDoc.thumbnailUrls[pageIndex] = thumbnailUrl;
+        return { ...prev, [docId]: updatedDoc };
+    });
+  }, [sourceDocs]);
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -514,6 +555,57 @@ export function PdfComposer({
     });
   };
 
+  const openSignaturePad = (docId: UniqueId, pageIndex: number) => {
+    setSigningPageInfo({ docId, pageIndex });
+    setIsSignatureDialogOpen(true);
+  };
+
+  const handleSaveSignature = async (signatureImage: string) => {
+    if (!signingPageInfo) return;
+    const { docId, pageIndex } = signingPageInfo;
+    const sourceDoc = sourceDocs[docId];
+    if (!sourceDoc) return;
+
+    setIsLoading(true);
+    try {
+        const pngImage = await sourceDoc.doc.embedPng(signatureImage);
+        const page = sourceDoc.doc.getPage(pageIndex);
+        const { width, height } = page.getSize();
+        
+        // Example: Place signature at the bottom right
+        const signatureWidth = 150;
+        const signatureHeight = (pngImage.height / pngImage.width) * signatureWidth;
+        
+        page.drawImage(pngImage, {
+            x: width - signatureWidth - 50,
+            y: 50,
+            width: signatureWidth,
+            height: signatureHeight,
+        });
+
+        // The sourceDoc.doc is now modified. We need to re-render the thumbnail.
+        await updatePageThumbnail(docId, pageIndex);
+        
+        toast({
+            title: "Signature Added",
+            description: `Signature has been added to page ${pageIndex + 1} of "${sourceDoc.filename}".`,
+        });
+
+    } catch (error) {
+        console.error("Failed to add signature:", error);
+        toast({
+            variant: "destructive",
+            title: "Error Adding Signature",
+            description: "There was an issue adding the signature to the PDF.",
+        });
+    } finally {
+        setIsLoading(false);
+        setIsSignatureDialogOpen(false);
+        setSigningPageInfo(null);
+    }
+  };
+
+
   return (
     <TooltipProvider>
       <DndContext
@@ -621,6 +713,7 @@ export function PdfComposer({
                                     pageIndex={i}
                                     thumbnailUrl={thumbnailUrls?.[i]}
                                     onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
+                                    onSign={() => openSignaturePad(id, i)}
                                 />
                                 )
                             )}
@@ -753,6 +846,18 @@ export function PdfComposer({
           ) : null}
         </DragOverlay>
       </DndContext>
+      <SignatureDialog
+        isOpen={isSignatureDialogOpen}
+        onClose={() => {
+            setIsSignatureDialogOpen(false);
+            setSigningPageInfo(null);
+        }}
+        onSave={handleSaveSignature}
+        />
     </TooltipProvider>
   );
 }
+
+    
+
+    
