@@ -2,9 +2,10 @@
 "use client";
 
 import { useRef, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Eraser } from 'lucide-react';
+import { Eraser, Trash2 } from 'lucide-react';
 
 interface SignatureDialogProps {
   isOpen: boolean;
@@ -12,10 +13,13 @@ interface SignatureDialogProps {
   onSave: (signatureImage: string) => void;
 }
 
+const SIGNATURE_STORAGE_KEY = 'pdf-composer-signature';
+
 export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawing, setHasDrawing] = useState(false);
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
 
   const getCanvasContext = () => {
     const canvas = canvasRef.current;
@@ -24,11 +28,22 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
   };
 
   useEffect(() => {
-    const context = getCanvasContext();
-    if (context) {
-      context.lineCap = 'round';
-      context.strokeStyle = 'black';
-      context.lineWidth = 2;
+    if (isOpen) {
+        try {
+            const storedSignature = localStorage.getItem(SIGNATURE_STORAGE_KEY);
+            setSavedSignature(storedSignature);
+        } catch (error) {
+            console.error("Could not access local storage:", error);
+            setSavedSignature(null);
+        }
+
+        const context = getCanvasContext();
+        if (context) {
+            context.lineCap = 'round';
+            context.strokeStyle = document.documentElement.classList.contains('dark') ? 'white' : 'black';
+            context.lineWidth = 2;
+        }
+        clearCanvas(false); // Clear without resetting hasDrawing state
     }
   }, [isOpen]);
 
@@ -40,6 +55,10 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
     context.moveTo(offsetX, offsetY);
     setIsDrawing(true);
     setHasDrawing(true);
+    // If user starts drawing, hide the saved signature preview for this session
+    if (savedSignature) {
+        setSavedSignature(null);
+    }
   };
 
   const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -74,18 +93,19 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
     };
   }
 
-  const clearCanvas = () => {
+  const clearCanvas = (resetDrawingState = true) => {
     const context = getCanvasContext();
     if (context && canvasRef.current) {
       context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      setHasDrawing(false);
+      if (resetDrawingState) {
+          setHasDrawing(false);
+      }
     }
   };
 
-  const handleSave = () => {
+  const handleSaveDrawnSignature = () => {
     const canvas = canvasRef.current;
     if (canvas) {
-      // Create a new canvas to trim whitespace
       const context = canvas.getContext('2d');
       if (!context) return;
 
@@ -105,7 +125,7 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
         }
       }
 
-      if (maxX === 0) { // Empty canvas
+      if (maxX === 0) {
           onClose();
           return;
       }
@@ -121,19 +141,52 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
       if(!trimmedContext) return;
 
       trimmedContext.drawImage(canvas, minX - padding, minY - padding, trimmedWidth, trimmedHeight, 0, 0, trimmedWidth, trimmedHeight);
-
-      onSave(trimmedCanvas.toDataURL('image/png'));
-      clearCanvas();
+      
+      const signatureDataUrl = trimmedCanvas.toDataURL('image/png');
+      try {
+        localStorage.setItem(SIGNATURE_STORAGE_KEY, signatureDataUrl);
+      } catch (error) {
+        console.error("Could not save signature to local storage:", error);
+      }
+      onSave(signatureDataUrl);
     }
   };
+
+  const handleUseSavedSignature = () => {
+      if (savedSignature) {
+          onSave(savedSignature);
+      }
+  };
+
+  const handleDeleteSavedSignature = () => {
+    try {
+        localStorage.removeItem(SIGNATURE_STORAGE_KEY);
+        setSavedSignature(null);
+    } catch (error) {
+        console.error("Could not delete signature from local storage:", error);
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Draw your signature</DialogTitle>
+          <DialogTitle>Add Your Signature</DialogTitle>
         </DialogHeader>
-        <div className="flex justify-center">
+        <div className="relative flex justify-center">
+            {savedSignature && !hasDrawing && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-md border border-dashed bg-background/80 backdrop-blur-sm">
+                    <p className="text-sm font-medium text-muted-foreground">Previously saved signature:</p>
+                    <Image src={savedSignature} alt="Saved Signature" width={200} height={100} className="rounded-md bg-white p-2 shadow-inner" />
+                    <div className="flex gap-2">
+                        <Button onClick={handleUseSavedSignature}>Use Saved Signature</Button>
+                        <Button variant="ghost" size="icon" onClick={handleDeleteSavedSignature} aria-label="Delete saved signature">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Or, start drawing below to create a new one.</p>
+                </div>
+            )}
             <canvas
               ref={canvasRef}
               width="400"
@@ -149,18 +202,16 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
             />
         </div>
         <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={clearCanvas} disabled={!hasDrawing}>
+          <Button variant="outline" onClick={() => clearCanvas(true)} disabled={!hasDrawing}>
             <Eraser className="mr-2 h-4 w-4" />
             Clear
           </Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!hasDrawing}>Save Signature</Button>
+            <Button onClick={handleSaveDrawnSignature} disabled={!hasDrawing}>Save Signature</Button>
           </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
