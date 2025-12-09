@@ -166,11 +166,13 @@ function SortableTargetPage({
   pageNumber,
   thumbnailUrl,
   onDelete,
+  onSign,
 }: {
   id: UniqueId;
   pageNumber: number;
   thumbnailUrl?: string | null;
   onDelete: (id: UniqueId) => void;
+  onSign: () => void;
 }) {
   const {
     attributes,
@@ -202,16 +204,37 @@ function SortableTargetPage({
         >
           <GripVertical className="h-5 w-5" />
         </div>
+        <div className="absolute right-1 top-1 flex flex-col gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => onDelete(id)}
+                        aria-label="Delete page"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left"><p>Delete page</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={onSign}
+                        aria-label="Sign page"
+                    >
+                        <PenSquare className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left"><p>Sign this page</p></TooltipContent>
+            </Tooltip>
+        </div>
       </div>
-      <Button
-        variant="destructive"
-        size="icon"
-        className="absolute right-1 top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
-        onClick={() => onDelete(id)}
-        aria-label="Delete page"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
     </div>
   );
 }
@@ -815,6 +838,7 @@ export function PdfComposer({
                             pageNumber={index + 1}
                             thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
                             onDelete={deleteTargetPage}
+                            onSign={() => openSignaturePad(page.docId, page.originalPageIndex)}
                           />
                         ))}
                       </div>
