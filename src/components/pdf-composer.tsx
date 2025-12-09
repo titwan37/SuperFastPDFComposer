@@ -527,15 +527,17 @@ export function PdfComposer({
 }, [activeId, sourceDocs, targetPages]);
 
   const handleSourcePageDoubleClick = (docId: UniqueId, pageIndex: number) => {
+    const sourceDoc = sourceDocs[docId];
+    if (!sourceDoc) return;
+    
     const newPage: TargetPage = {
       id: `target-${docId}-${pageIndex}-${getUniqueId()}`,
       docId: docId,
       originalPageIndex: pageIndex,
     };
     setTargetPages((pages) => [...pages, newPage]);
-    const sourceDoc = sourceDocs[docId];
     toast({
-      title: `Page Added from "${sourceDoc?.filename}"`,
+      title: `Page Added from "${sourceDoc.filename}"`,
       description: `Page ${pageIndex + 1} was added to the new document.`,
     });
   };
@@ -565,7 +567,7 @@ export function PdfComposer({
     setIsSignatureDialogOpen(true);
   };
 
-  const handleSaveSignature = async (signatureImage: string, position: SignaturePosition, yOffset: number) => {
+  const handleSaveSignature = async (signatureImage: string, position: SignaturePosition, xOffset: number) => {
     if (!signingPageInfo) return;
     const { docId, pageIndex } = signingPageInfo;
     const sourceDoc = sourceDocs[docId];
@@ -579,10 +581,9 @@ export function PdfComposer({
         
         const signatureWidth = 150;
         const signatureHeight = (pngImage.height / pngImage.width) * signatureWidth;
+        const margin = 50;
         
         let x: number;
-        const margin = 50;
-
         switch (position) {
             case 'left':
                 x = margin;
@@ -596,8 +597,8 @@ export function PdfComposer({
         }
 
         page.drawImage(pngImage, {
-            x: x,
-            y: yOffset,
+            x: x + xOffset,
+            y: margin,
             width: signatureWidth,
             height: signatureHeight,
         });
@@ -876,7 +877,3 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
-
-    
-
-    

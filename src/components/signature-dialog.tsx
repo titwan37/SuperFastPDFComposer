@@ -25,7 +25,7 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
   const [hasDrawing, setHasDrawing] = useState(false);
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [position, setPosition] = useState<SignaturePosition>('right');
-  const [yOffset, setYOffset] = useState(50);
+  const [xOffset, setXOffset] = useState(0);
 
 
   const getCanvasContext = () => {
@@ -155,13 +155,13 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
       } catch (error) {
         console.error("Could not save signature to local storage:", error);
       }
-      onSave(signatureDataUrl, position, yOffset);
+      onSave(signatureDataUrl, position, xOffset);
     }
   };
 
   const handleUseSavedSignature = () => {
       if (savedSignature) {
-          onSave(savedSignature, position, yOffset);
+          onSave(savedSignature, position, xOffset);
       }
   };
 
@@ -227,16 +227,16 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
                 </RadioGroup>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="offset-y">Vertical Offset (from bottom, in pixels)</Label>
+                <Label htmlFor="offset-x">Horizontal Offset (in pixels)</Label>
                 <Input
-                    id="offset-y"
+                    id="offset-x"
                     type="number"
-                    value={yOffset}
-                    onChange={(e) => setYOffset(parseInt(e.target.value, 10) || 0)}
-                    placeholder="e.g., 50"
+                    value={xOffset}
+                    onChange={(e) => setXOffset(parseInt(e.target.value, 10) || 0)}
+                    placeholder="e.g., -20 or 20"
                 />
                 <p className="text-xs text-muted-foreground">
-                   Adjusts the signature's distance from the bottom of the page.
+                   Adjusts the signature's horizontal position. Use negative for left, positive for right.
                 </p>
             </div>
         </div>
@@ -248,6 +248,7 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button onClick={handleSaveDrawnSignature} disabled={!hasDrawing && !savedSignature}>Save Signature</Button>
+
           </div>
         </DialogFooter>
       </DialogContent>
