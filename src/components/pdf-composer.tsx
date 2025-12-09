@@ -114,13 +114,11 @@ function DraggableSourcePage({
   pageIndex,
   thumbnailUrl,
   onDoubleClick,
-  onSign,
 }: {
   docId: UniqueId;
   pageIndex: number;
   thumbnailUrl?: string | null;
   onDoubleClick: () => void;
-  onSign: () => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `source-${docId}-${pageIndex}`,
@@ -140,22 +138,6 @@ function DraggableSourcePage({
           thumbnailUrl={thumbnailUrl}
         />
       </div>
-       <Tooltip>
-        <TooltipTrigger asChild>
-            <Button
-                variant="outline"
-                size="icon"
-                className="absolute right-1 top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
-                onClick={onSign}
-                aria-label="Sign page"
-            >
-                <PenSquare className="h-4 w-4" />
-            </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-            <p>Sign this page</p>
-        </TooltipContent>
-      </Tooltip>
     </div>
   );
 }
@@ -736,7 +718,6 @@ export function PdfComposer({
                                     pageIndex={i}
                                     thumbnailUrl={thumbnailUrls?.[i]}
                                     onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
-                                    onSign={() => openSignaturePad(id, i)}
                                 />
                                 )
                             )}
