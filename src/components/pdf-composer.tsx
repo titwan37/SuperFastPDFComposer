@@ -239,7 +239,7 @@ export function PdfComposer({
   const targetFileInputRef = useRef<HTMLInputElement>(null);
   
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
-  const [signingPageInfo, setSigningPageInfo] = useState<{ docId: UniqueId; pageIndex: number } | null>(null);
+  const [signingPageInfo, setSigningPageInfo] = useState<{ targetPageId: UniqueId; docId: UniqueId; pageIndex: number } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -269,12 +269,9 @@ export function PdfComposer({
     return canvas.toDataURL();
   };
   
-  const updatePageThumbnail = useCallback(async (docId: string, pageIndex: number) => {
-    const sourceDoc = sourceDocs[docId];
-    if (!sourceDoc) return;
-
+  const updatePageThumbnail = useCallback(async (docId: string, pageIndex: number, pdfDoc: PDFDocument) => {
     // Use pdf-lib document to get the latest page data
-    const pdfBytes = await sourceDoc.doc.save();
+    const pdfBytes = await pdfDoc.save();
     const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
     const thumbnailUrl = await renderPdfPage(pdfjsDoc, pageIndex + 1);
 
@@ -284,7 +281,7 @@ export function PdfComposer({
         updatedDoc.thumbnailUrls[pageIndex] = thumbnailUrl;
         return { ...prev, [docId]: updatedDoc };
     });
-  }, [sourceDocs]);
+  }, []);
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -562,21 +559,25 @@ export function PdfComposer({
     });
   };
 
-  const openSignaturePad = (docId: UniqueId, pageIndex: number) => {
-    setSigningPageInfo({ docId, pageIndex });
+  const openSignaturePad = (targetPageId: UniqueId, docId: UniqueId, pageIndex: number) => {
+    setSigningPageInfo({ targetPageId, docId, pageIndex });
     setIsSignatureDialogOpen(true);
   };
 
   const handleSaveSignature = async (signatureImage: string, position: SignaturePosition, xOffset: number) => {
     if (!signingPageInfo) return;
-    const { docId, pageIndex } = signingPageInfo;
-    const sourceDoc = sourceDocs[docId];
-    if (!sourceDoc) return;
+    const { targetPageId, docId, pageIndex } = signingPageInfo;
+    const originalSourceDoc = sourceDocs[docId];
+    if (!originalSourceDoc) return;
 
     setIsLoading(true);
     try {
-        const pngImage = await sourceDoc.doc.embedPng(signatureImage);
-        const page = sourceDoc.doc.getPage(pageIndex);
+        // Create a temporary copy of the original document to modify it
+        const pdfBytes = await originalSourceDoc.doc.save();
+        const newPdfDoc = await PDFDocument.load(pdfBytes);
+
+        const pngImage = await newPdfDoc.embedPng(signatureImage);
+        const page = newPdfDoc.getPage(pageIndex);
         const { width, height } = page.getSize();
         
         const signatureWidth = 150;
@@ -603,12 +604,26 @@ export function PdfComposer({
             height: signatureHeight,
         });
 
-        // The sourceDoc.doc is now modified. We need to re-render the thumbnail.
-        await updatePageThumbnail(docId, pageIndex);
+        // Create a new source doc entry for the modified document
+        const newDocId = getUniqueId();
+        const newSourceDoc: SourceDoc = {
+            ...originalSourceDoc,
+            id: newDocId,
+            doc: newPdfDoc,
+        };
+
+        // Update the source docs list and the target page to point to the new modified doc
+        setSourceDocs(prev => ({ ...prev, [newDocId]: newSourceDoc }));
+        setTargetPages(prev => prev.map(p => 
+            p.id === targetPageId ? { ...p, docId: newDocId } : p
+        ));
+
+        // The sourceDoc.doc is now modified. We need to re-render the thumbnail for the new doc.
+        await updatePageThumbnail(newDocId, pageIndex, newPdfDoc);
         
         toast({
             title: "Signature Added",
-            description: `Signature has been added to page ${pageIndex + 1} of "${sourceDoc.filename}".`,
+            description: `Signature has been added to page ${pageIndex + 1} of "${originalSourceDoc.filename}".`,
         });
 
     } catch (error) {
@@ -834,7 +849,7 @@ export function PdfComposer({
                             pageNumber={index + 1}
                             thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
                             onDelete={deleteTargetPage}
-                            onSign={() => openSignaturePad(page.docId, page.originalPageIndex)}
+                            onSign={() => openSignaturePad(page.id, page.docId, page.originalPageIndex)}
                           />
                         ))}
                       </div>
@@ -877,3 +892,5 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
