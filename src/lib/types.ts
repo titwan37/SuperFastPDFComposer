@@ -14,3 +14,5 @@ export type SourceDoc = {
   filename: string;
   thumbnailUrls: (string | undefined | null)[]; // Array of data URLs for page thumbnails
 };
+
+export type SignaturePosition = 'left' | 'center' | 'right';

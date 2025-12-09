@@ -40,7 +40,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { SourceDoc, TargetPage } from "@/lib/types";
+import type { SourceDoc, TargetPage, SignaturePosition } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -565,7 +565,7 @@ export function PdfComposer({
     setIsSignatureDialogOpen(true);
   };
 
-  const handleSaveSignature = async (signatureImage: string) => {
+  const handleSaveSignature = async (signatureImage: string, position: SignaturePosition, yOffset: number) => {
     if (!signingPageInfo) return;
     const { docId, pageIndex } = signingPageInfo;
     const sourceDoc = sourceDocs[docId];
@@ -577,13 +577,27 @@ export function PdfComposer({
         const page = sourceDoc.doc.getPage(pageIndex);
         const { width, height } = page.getSize();
         
-        // Example: Place signature at the bottom right
         const signatureWidth = 150;
         const signatureHeight = (pngImage.height / pngImage.width) * signatureWidth;
         
+        let x: number;
+        const margin = 50;
+
+        switch (position) {
+            case 'left':
+                x = margin;
+                break;
+            case 'center':
+                x = (width - signatureWidth) / 2;
+                break;
+            case 'right':
+                x = width - signatureWidth - margin;
+                break;
+        }
+
         page.drawImage(pngImage, {
-            x: width - signatureWidth - 50,
-            y: 50,
+            x: x,
+            y: yOffset,
             width: signatureWidth,
             height: signatureHeight,
         });

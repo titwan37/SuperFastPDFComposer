@@ -6,11 +6,15 @@ import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eraser, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Input } from '@/components/ui/input';
+import type { SignaturePosition } from '@/lib/types';
 
 interface SignatureDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (signatureImage: string) => void;
+  onSave: (signatureImage: string, position: SignaturePosition, offset: number) => void;
 }
 
 const SIGNATURE_STORAGE_KEY = 'pdf-composer-signature';
@@ -20,6 +24,9 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawing, setHasDrawing] = useState(false);
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
+  const [position, setPosition] = useState<SignaturePosition>('right');
+  const [yOffset, setYOffset] = useState(50);
+
 
   const getCanvasContext = () => {
     const canvas = canvasRef.current;
@@ -148,13 +155,13 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
       } catch (error) {
         console.error("Could not save signature to local storage:", error);
       }
-      onSave(signatureDataUrl);
+      onSave(signatureDataUrl, position, yOffset);
     }
   };
 
   const handleUseSavedSignature = () => {
       if (savedSignature) {
-          onSave(savedSignature);
+          onSave(savedSignature, position, yOffset);
       }
   };
 
@@ -201,14 +208,46 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
               onTouchEnd={stopDrawing}
             />
         </div>
-        <DialogFooter className="sm:justify-between">
+        <div className="grid gap-4 pt-4">
+            <div className="space-y-2">
+                <Label>Position</Label>
+                 <RadioGroup defaultValue="right" className="flex gap-4" onValueChange={(value: SignaturePosition) => setPosition(value)}>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="left" id="pos-left" />
+                        <Label htmlFor="pos-left">Left</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="center" id="pos-center" />
+                        <Label htmlFor="pos-center">Center</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="right" id="pos-right" />
+                        <Label htmlFor="pos-right">Right</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="offset-y">Vertical Offset (from bottom, in pixels)</Label>
+                <Input
+                    id="offset-y"
+                    type="number"
+                    value={yOffset}
+                    onChange={(e) => setYOffset(parseInt(e.target.value, 10) || 0)}
+                    placeholder="e.g., 50"
+                />
+                <p className="text-xs text-muted-foreground">
+                   Adjusts the signature's distance from the bottom of the page.
+                </p>
+            </div>
+        </div>
+        <DialogFooter className="sm:justify-between pt-4">
           <Button variant="outline" onClick={() => clearCanvas(true)} disabled={!hasDrawing}>
             <Eraser className="mr-2 h-4 w-4" />
             Clear
           </Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button onClick={handleSaveDrawnSignature} disabled={!hasDrawing}>Save Signature</Button>
+            <Button onClick={handleSaveDrawnSignature} disabled={!hasDrawing && !savedSignature}>Save Signature</Button>
           </div>
         </DialogFooter>
       </DialogContent>
