@@ -38,7 +38,9 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
     if (isOpen) {
         try {
             const storedSignature = localStorage.getItem(SIGNATURE_STORAGE_KEY);
-            setSavedSignature(storedSignature);
+            if (storedSignature) {
+              setSavedSignature(storedSignature);
+            }
         } catch (error) {
             console.error("Could not access local storage:", error);
             setSavedSignature(null);
@@ -62,10 +64,6 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
     context.moveTo(offsetX, offsetY);
     setIsDrawing(true);
     setHasDrawing(true);
-    // If user starts drawing, hide the saved signature preview for this session
-    if (savedSignature) {
-        setSavedSignature(null);
-    }
   };
 
   const draw = (event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -112,7 +110,7 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
 
   const handleSaveDrawnSignature = () => {
     const canvas = canvasRef.current;
-    if (canvas) {
+    if (canvas && hasDrawing) {
       const context = canvas.getContext('2d');
       if (!context) return;
 
@@ -132,7 +130,7 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
         }
       }
 
-      if (maxX === 0) {
+      if (maxX === 0) { // Nothing was drawn
           onClose();
           return;
       }
@@ -152,10 +150,14 @@ export function SignatureDialog({ isOpen, onClose, onSave }: SignatureDialogProp
       const signatureDataUrl = trimmedCanvas.toDataURL('image/png');
       try {
         localStorage.setItem(SIGNATURE_STORAGE_KEY, signatureDataUrl);
+        setSavedSignature(signatureDataUrl); // Update state immediately
+        clearCanvas(true); // Reset canvas and drawing state
       } catch (error) {
         console.error("Could not save signature to local storage:", error);
       }
       onSave(signatureDataUrl, position, xOffset);
+    } else if (savedSignature) {
+        handleUseSavedSignature();
     }
   };
 
