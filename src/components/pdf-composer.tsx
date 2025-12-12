@@ -36,6 +36,7 @@ import {
   ZoomIn,
   ZoomOut,
   PenSquare,
+  FileEdit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SignatureDialog } from "./signature-dialog";
+import { AnnotationPage } from "./annotation-page";
 
 
 // pdf.js worker configuration
@@ -149,12 +151,14 @@ function SortableTargetPage({
   thumbnailUrl,
   onDelete,
   onSign,
+  onAnnotate,
 }: {
   id: UniqueId;
   pageNumber: number;
   thumbnailUrl?: string | null;
   onDelete: (id: UniqueId) => void;
   onSign: () => void;
+  onAnnotate: () => void;
 }) {
   const {
     attributes,
@@ -215,6 +219,20 @@ function SortableTargetPage({
                 </TooltipTrigger>
                 <TooltipContent side="left"><p>Sign this page</p></TooltipContent>
             </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={onAnnotate}
+                        aria-label="Annotate page"
+                    >
+                        <FileEdit className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left"><p>Annotate this page</p></TooltipContent>
+            </Tooltip>
         </div>
       </div>
     </div>
@@ -240,6 +258,10 @@ export function PdfComposer({
   
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [signingPageInfo, setSigningPageInfo] = useState<{ targetPageId: UniqueId; docId: UniqueId; pageIndex: number } | null>(null);
+
+  const [isAnnotationPageOpen, setIsAnnotationPageOpen] = useState(false);
+  const [annotatingPageInfo, setAnnotatingPageInfo] = useState<{ targetPageId: UniqueId; docId: UniqueId; pageIndex: number } | null>(null);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -572,7 +594,6 @@ export function PdfComposer({
 
     setIsLoading(true);
     try {
-        // Create a temporary copy of the original document to modify it
         const pdfBytes = await originalSourceDoc.doc.save();
         const newPdfDoc = await PDFDocument.load(pdfBytes);
 
@@ -604,26 +625,27 @@ export function PdfComposer({
             height: signatureHeight,
         });
 
-        // Create a new source doc entry for the modified document
         const newDocId = getUniqueId();
+        const newPdfBytes = await newPdfDoc.save();
+        const finalPdfDoc = await PDFDocument.load(newPdfBytes);
+
         const newSourceDoc: SourceDoc = {
             ...originalSourceDoc,
             id: newDocId,
-            doc: newPdfDoc,
+            doc: finalPdfDoc,
+            thumbnailUrls: [...originalSourceDoc.thumbnailUrls]
         };
 
-        // Update the source docs list and the target page to point to the new modified doc
         setSourceDocs(prev => ({ ...prev, [newDocId]: newSourceDoc }));
         setTargetPages(prev => prev.map(p => 
             p.id === targetPageId ? { ...p, docId: newDocId } : p
         ));
 
-        // The sourceDoc.doc is now modified. We need to re-render the thumbnail for the new doc.
-        await updatePageThumbnail(newDocId, pageIndex, newPdfDoc);
+        await updatePageThumbnail(newDocId, pageIndex, finalPdfDoc);
         
         toast({
             title: "Signature Added",
-            description: `Signature has been added to page ${pageIndex + 1} of "${originalSourceDoc.filename}".`,
+            description: `Signature has been added to page ${pageIndex + 1}.`,
         });
 
     } catch (error) {
@@ -638,6 +660,41 @@ export function PdfComposer({
         setIsSignatureDialogOpen(false);
         setSigningPageInfo(null);
     }
+  };
+
+  const openAnnotationPage = (targetPageId: UniqueId, docId: UniqueId, pageIndex: number) => {
+    setAnnotatingPageInfo({ targetPageId, docId, pageIndex });
+    setIsAnnotationPageOpen(true);
+  };
+  
+  const handleSaveAnnotations = async (
+    targetPageId: string,
+    pdfDocWithAnnotations: PDFDocument
+  ) => {
+    const { docId, pageIndex } = annotatingPageInfo!;
+    const originalSourceDoc = sourceDocs[docId];
+
+    const newDocId = getUniqueId();
+    const newSourceDoc: SourceDoc = {
+      ...originalSourceDoc,
+      id: newDocId,
+      doc: pdfDocWithAnnotations,
+      thumbnailUrls: [...originalSourceDoc.thumbnailUrls],
+    };
+
+    setSourceDocs((prev) => ({ ...prev, [newDocId]: newSourceDoc }));
+    setTargetPages((prev) =>
+      prev.map((p) => (p.id === targetPageId ? { ...p, docId: newDocId } : p))
+    );
+
+    await updatePageThumbnail(newDocId, pageIndex, pdfDocWithAnnotations);
+
+    toast({
+      title: "Annotations Saved",
+      description: `Your changes to the page have been saved.`,
+    });
+    setIsAnnotationPageOpen(false);
+    setAnnotatingPageInfo(null);
   };
 
 
@@ -850,6 +907,7 @@ export function PdfComposer({
                             thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
                             onDelete={deleteTargetPage}
                             onSign={() => openSignaturePad(page.id, page.docId, page.originalPageIndex)}
+                            onAnnotate={() => openAnnotationPage(page.id, page.docId, page.originalPageIndex)}
                           />
                         ))}
                       </div>
@@ -889,8 +947,17 @@ export function PdfComposer({
         }}
         onSave={handleSaveSignature}
         />
+       {isAnnotationPageOpen && annotatingPageInfo && (
+         <AnnotationPage
+            isOpen={isAnnotationPageOpen}
+            onClose={() => setIsAnnotationPageOpen(false)}
+            pdfDoc={sourceDocs[annotatingPageInfo.docId].doc}
+            pageIndex={annotatingPageInfo.pageIndex}
+            onSave={(annotatedDoc) =>
+              handleSaveAnnotations(annotatingPageInfo.targetPageId, annotatedDoc)
+            }
+        />
+      )}
     </TooltipProvider>
   );
 }
-
-    
