@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts, line, c, degrees, moveTo, lineTo } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   DndContext,
@@ -21,7 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Loader } from "lucide-react";
 import { AnnotationToolbar } from "./annotation-toolbar";
 import { DraggableAnnotation } from "./draggable-annotation";
-import type { Annotation, TextAnnotation } from "@/lib/types";
+import { DraggableIconAnnotation } from "./draggable-icon-annotation";
+import type { Annotation, TextAnnotation, IconAnnotation } from "@/lib/types";
 
 // pdf.js worker configuration
 if (typeof window !== "undefined") {
@@ -49,15 +50,15 @@ export function AnnotationPage({
   const [pageImageUrl, setPageImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [activeTool, setActiveTool] = useState<"select" | "text" | "pen">("select");
+  const [activeTool, setActiveTool] = useState<'select' | 'text' | 'pen' | 'check' | 'cross'>("select");
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
 
   // Style for the currently active tool
   const [textColor, setTextColor] = useState("#000000");
   const [fontSize, setFontSize] = useState(16);
-  const [strokeColor, setStrokeColor] = useState("#FF0000");
-  const [strokeWidth, setStrokeWidth] = useState(5);
+  const [strokeColor, setStrokeColor] = useState("#008000");
+  const [strokeWidth, setStrokeWidth] = useState(3);
 
   const pageContainerRef = useRef<HTMLDivElement>(null);
   
@@ -120,6 +121,10 @@ export function AnnotationPage({
       const font = await finalDoc.embedFont(StandardFonts.Helvetica);
 
       for (const anno of annotations) {
+        const [r, g, b] = anno.strokeColor
+            ? anno.strokeColor.substring(1).match(/.{2}/g)!.map((hex) => parseInt(hex, 16) / 255)
+            : [0, 0, 0];
+        
         if (anno.type === "text") {
           const textAnno = anno as TextAnnotation;
           const [r, g, b] = textAnno.fontColor
@@ -135,6 +140,28 @@ export function AnnotationPage({
             color: rgb(r, g, b),
           });
         }
+        if (anno.type === "icon") {
+          const iconAnno = anno as IconAnnotation;
+          const iconSize = iconAnno.size;
+          const x = iconAnno.x / zoom;
+          const y = height - (iconAnno.y / zoom) - (iconSize);
+          if (iconAnno.iconType === 'check') {
+             page.drawSvgPath(
+              `M${x} ${y + iconSize / 2} L${x + iconSize / 3} ${y} L${x + iconSize} ${y + iconSize}`, {
+                borderColor: rgb(r, g, b),
+                borderWidth: iconAnno.strokeWidth,
+              }
+            )
+          }
+          if (iconAnno.iconType === 'cross') {
+             page.drawSvgPath(
+              `M${x} ${y} L${x + iconSize} ${y + iconSize} M${x} ${y + iconSize} L${x + iconSize} ${y}`, {
+                borderColor: rgb(r, g, b),
+                borderWidth: iconAnno.strokeWidth,
+              }
+            )
+          }
+        }
         // TODO: Implement drawing annotation saving
       }
       onSave(finalDoc);
@@ -146,13 +173,18 @@ export function AnnotationPage({
   };
 
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (activeTool === "text" && pageContainerRef.current) {
-      const rect = pageContainerRef.current.getBoundingClientRect();
+    if (!pageContainerRef.current) return;
+    
+    const rect = pageContainerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (activeTool === "text") {
       const newAnnotation: TextAnnotation = {
         id: `text-${Date.now()}`,
         type: "text",
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: x,
+        y: y,
         width: 150,
         height: 30,
         text: "Type here...",
@@ -163,6 +195,19 @@ export function AnnotationPage({
       setAnnotations((prev) => [...prev, newAnnotation]);
       setSelectedAnnotationId(newAnnotation.id);
       setActiveTool("select"); // Switch to select tool to allow moving the new text box
+    } else if (activeTool === 'check' || activeTool === 'cross') {
+      const newAnnotation: IconAnnotation = {
+        id: `icon-${Date.now()}`,
+        type: 'icon',
+        iconType: activeTool,
+        x: x,
+        y: y,
+        size: 30,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+      };
+      setAnnotations(prev => [...prev, newAnnotation]);
+      setActiveTool('select');
     } else {
       // Deselect if clicking on the page background
       if (e.target === pageContainerRef.current || (e.target as HTMLElement).tagName === 'IMG') {
@@ -185,7 +230,7 @@ export function AnnotationPage({
   const updateAnnotationText = (id: string, newText: string) => {
     setAnnotations(prev => prev.map(a => a.id === id ? {...a, text: newText} : a));
   };
-  
+
   const deleteAnnotation = (id: string) => {
     setAnnotations(prev => prev.filter(a => a.id !== id));
   };
@@ -230,18 +275,32 @@ export function AnnotationPage({
                         alt={`Page ${pageIndex + 1}`}
                         className="w-full h-auto"
                       />
-                      {annotations
-                        .filter((a) => a.type === "text")
-                        .map((anno) => (
-                          <DraggableAnnotation
-                            key={anno.id}
-                            annotation={anno as TextAnnotation}
-                            isSelected={selectedAnnotationId === anno.id}
-                            onSelect={() => setSelectedAnnotationId(anno.id)}
-                            onDelete={() => deleteAnnotation(anno.id)}
-                            onTextChange={(newText) => updateAnnotationText(anno.id, newText)}
-                          />
-                        ))}
+                       {annotations.map((anno) => {
+                        if (anno.type === 'text') {
+                          return (
+                            <DraggableAnnotation
+                              key={anno.id}
+                              annotation={anno}
+                              isSelected={selectedAnnotationId === anno.id}
+                              onSelect={() => setSelectedAnnotationId(anno.id)}
+                              onDelete={() => deleteAnnotation(anno.id)}
+                              onTextChange={(newText) => updateAnnotationText(anno.id, newText)}
+                            />
+                          );
+                        }
+                        if (anno.type === 'icon') {
+                          return (
+                            <DraggableIconAnnotation
+                              key={anno.id}
+                              annotation={anno}
+                              isSelected={selectedAnnotationId === anno.id}
+                              onSelect={() => setSelectedAnnotationId(anno.id)}
+                              onDelete={() => deleteAnnotation(anno.id)}
+                            />
+                          )
+                        }
+                        return null;
+                      })}
                     </div>
                 </DndContext>
             )}

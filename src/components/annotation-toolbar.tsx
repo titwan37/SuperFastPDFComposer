@@ -1,7 +1,7 @@
 
 "use client";
 
-import { MousePointer2, Type, Pen, ZoomIn, ZoomOut } from 'lucide-react';
+import { MousePointer2, Type, Pen, ZoomIn, ZoomOut, Check, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Label } from './ui/label';
@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '@/lib/utils';
 
 interface AnnotationToolbarProps {
-    activeTool: 'select' | 'text' | 'pen';
-    setActiveTool: (tool: 'select' | 'text' | 'pen') => void;
+    activeTool: 'select' | 'text' | 'pen' | 'check' | 'cross';
+    setActiveTool: (tool: 'select' | 'text' | 'pen' | 'check' | 'cross') => void;
     textColor: string;
     setTextColor: (color: string) => void;
     fontSize: number;
@@ -38,6 +38,9 @@ export function AnnotationToolbar({
     zoom,
     setZoom,
 }: AnnotationToolbarProps) {
+
+  const isIconToolActive = activeTool === 'check' || activeTool === 'cross';
+
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2 shadow-sm">
       {/* Tool Selection */}
@@ -64,6 +67,22 @@ export function AnnotationToolbar({
         aria-label="Pen Tool"
       >
         <Pen className="h-5 w-5" />
+      </Button>
+       <Button
+        variant={activeTool === 'check' ? 'secondary' : 'ghost'}
+        size="icon"
+        onClick={() => setActiveTool('check')}
+        aria-label="Checkmark Tool"
+      >
+        <Check className="h-5 w-5" />
+      </Button>
+      <Button
+        variant={activeTool === 'cross' ? 'secondary' : 'ghost'}
+        size="icon"
+        onClick={() => setActiveTool('cross')}
+        aria-label="Cross Tool"
+      >
+        <X className="h-5 w-5" />
       </Button>
       <Separator orientation="vertical" className="h-8" />
       
@@ -97,8 +116,8 @@ export function AnnotationToolbar({
 
       <Separator orientation="vertical" className="h-8" />
       
-      {/* Pen Tool Options */}
-      <div className={cn("flex items-center gap-2", activeTool !== 'pen' && "opacity-50 pointer-events-none")}>
+      {/* Pen & Icon Tool Options */}
+      <div className={cn("flex items-center gap-2", activeTool !== 'pen' && !isIconToolActive && "opacity-50 pointer-events-none")}>
         <Label htmlFor="stroke-color" className="sr-only">Color</Label>
         <Input
           id="stroke-color"
@@ -106,13 +125,13 @@ export function AnnotationToolbar({
           value={strokeColor}
           onChange={(e) => setStrokeColor(e.target.value)}
           className="h-8 w-10 p-1"
-          disabled={activeTool !== 'pen'}
+          disabled={activeTool !== 'pen' && !isIconToolActive}
         />
         <Label htmlFor="stroke-width" className="sr-only">Width</Label>
          <Select
           value={strokeWidth.toString()}
           onValueChange={(val) => setStrokeWidth(Number(val))}
-          disabled={activeTool !== 'pen'}
+          disabled={activeTool !== 'pen' && !isIconToolActive}
         >
           <SelectTrigger className="h-8 w-20">
             <SelectValue />

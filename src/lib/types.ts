@@ -17,7 +17,7 @@ export type SourceDoc = {
 
 export type SignaturePosition = 'left' | 'center' | 'right';
 
-export type Annotation = TextAnnotation | DrawingAnnotation;
+export type Annotation = TextAnnotation | DrawingAnnotation | IconAnnotation;
 
 export type TextAnnotation = {
   id: string;
@@ -36,6 +36,17 @@ export type DrawingAnnotation = {
   id: string;
   type: 'drawing';
   paths: { x: number; y: number }[][];
+  strokeColor: string;
+  strokeWidth: number;
+};
+
+export type IconAnnotation = {
+  id: string;
+  type: 'icon';
+  iconType: 'check' | 'cross';
+  x: number;
+  y: number;
+  size: number;
   strokeColor: string;
   strokeWidth: number;
 };
