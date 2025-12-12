@@ -21,7 +21,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PDFDocument, rgb, png } from "pdf-lib";
+import { PDFDocument, rgb, PageSizes, JPGImage, PNGImage } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   Upload,
@@ -37,6 +37,7 @@ import {
   ZoomOut,
   PenSquare,
   FileEdit,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -255,6 +256,7 @@ export function PdfComposer({
   const [targetThumbnailScale, setTargetThumbnailScale] = useState(1);
   const sourceFileInputRef = useRef<HTMLInputElement>(null);
   const targetFileInputRef = useRef<HTMLInputElement>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [signingPageInfo, setSigningPageInfo] = useState<{ targetPageId: UniqueId; docId: UniqueId; pageIndex: number } | null>(null);
@@ -297,11 +299,21 @@ export function PdfComposer({
     const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
     const thumbnailUrl = await renderPdfPage(pdfjsDoc, pageIndex + 1);
 
+    // Update the source doc's thumbnail
     setSourceDocs(prev => {
-        const updatedDoc = { ...prev[docId] };
+        const updatedDoc = prev[docId];
         if (!updatedDoc) return prev;
-        updatedDoc.thumbnailUrls[pageIndex] = thumbnailUrl;
-        return { ...prev, [docId]: updatedDoc };
+        
+        const newThumbnailUrls = [...updatedDoc.thumbnailUrls];
+        newThumbnailUrls[pageIndex] = thumbnailUrl;
+
+        const newDoc = {
+            ...updatedDoc,
+            thumbnailUrls: newThumbnailUrls,
+            doc: pdfDoc, // also update the document itself
+        };
+        
+        return { ...prev, [docId]: newDoc };
     });
   }, []);
 
@@ -386,11 +398,88 @@ export function PdfComposer({
     }
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsLoading(true);
+    toast({
+        title: `Processing ${files.length} image(s)...`,
+        description: "Please wait while we convert your images to PDF pages.",
+    });
+
+    try {
+        for (const file of files) {
+            const docId = getUniqueId();
+            const arrayBuffer = await file.arrayBuffer();
+
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage(PageSizes.A4);
+            const { width: pageW, height: pageH } = page.getSize();
+
+            let image: JPGImage | PNGImage;
+            if (file.type === 'image/jpeg') {
+                image = await pdfDoc.embedJpg(arrayBuffer);
+            } else if (file.type === 'image/png') {
+                image = await pdfDoc.embedPng(arrayBuffer);
+            } else {
+                console.warn(`Unsupported image type: ${file.type}. Skipping file: ${file.name}`);
+                continue;
+            }
+
+            const scaled = image.scaleToFit(pageW, pageH);
+
+            page.drawImage(image, {
+                x: pageW / 2 - scaled.width / 2,
+                y: pageH / 2 - scaled.height / 2,
+                width: scaled.width,
+                height: scaled.height,
+            });
+
+            // Create a thumbnail from the image itself for the UI
+            const thumbnailUrl = URL.createObjectURL(file);
+            
+            const newSourceDoc: SourceDoc = {
+                id: docId,
+                doc: pdfDoc,
+                filename: file.name,
+                thumbnailUrls: [thumbnailUrl],
+            };
+            
+            setSourceDocs(prev => ({ ...prev, [docId]: newSourceDoc }));
+        }
+
+        toast({
+            title: "Images Processed",
+            description: `${files.length} image(s) have been successfully converted and added.`,
+        });
+
+    } catch (error) {
+        console.error("Failed to process image:", error);
+        toast({
+            variant: "destructive",
+            title: "Error Processing Image",
+            description: "There was an issue converting one or more of your images.",
+        });
+    } finally {
+        setIsLoading(false);
+        if (event.target) {
+            event.target.value = "";
+        }
+    }
+};
+
   const deleteTargetPage = (id: UniqueId) => {
     setTargetPages((pages) => pages.filter((p) => p.id !== id));
   };
 
   const deleteSourceDoc = (docId: UniqueId) => {
+    // Revoke object URLs for image-based docs to prevent memory leaks
+    const docToDelete = sourceDocs[docId];
+    if (docToDelete && docToDelete.thumbnailUrls[0]?.startsWith('blob:')) {
+      docToDelete.thumbnailUrls.forEach(url => url && URL.revokeObjectURL(url));
+    }
+
     // Remove the source document
     setSourceDocs(currentDocs => {
       const newDocs = {...currentDocs};
@@ -594,9 +683,7 @@ export function PdfComposer({
 
     setIsLoading(true);
     try {
-        const pdfBytes = await originalSourceDoc.doc.save();
-        const newPdfDoc = await PDFDocument.load(pdfBytes);
-
+        const newPdfDoc = await originalSourceDoc.doc.copy();
         const pngImage = await newPdfDoc.embedPng(signatureImage);
         const page = newPdfDoc.getPage(pageIndex);
         const { width, height } = page.getSize();
@@ -625,27 +712,11 @@ export function PdfComposer({
             height: signatureHeight,
         });
 
-        const newDocId = getUniqueId();
-        const newPdfBytes = await newPdfDoc.save();
-        const finalPdfDoc = await PDFDocument.load(newPdfBytes);
-
-        const newSourceDoc: SourceDoc = {
-            ...originalSourceDoc,
-            id: newDocId,
-            doc: finalPdfDoc,
-            thumbnailUrls: [...originalSourceDoc.thumbnailUrls]
-        };
-
-        setSourceDocs(prev => ({ ...prev, [newDocId]: newSourceDoc }));
-        setTargetPages(prev => prev.map(p => 
-            p.id === targetPageId ? { ...p, docId: newDocId } : p
-        ));
-
-        await updatePageThumbnail(newDocId, pageIndex, finalPdfDoc);
+        await updatePageThumbnail(docId, pageIndex, newPdfDoc);
         
         toast({
             title: "Signature Added",
-            description: `Signature has been added to page ${pageIndex + 1}.`,
+            description: `Signature has been added to page ${pageIndex + 1}. A new version of the source page has been created.`,
         });
 
     } catch (error) {
@@ -667,27 +738,19 @@ export function PdfComposer({
     setIsAnnotationPageOpen(true);
   };
   
-  const handleSaveAnnotations = async (
-    targetPageId: string,
-    pdfDocWithAnnotations: PDFDocument
+ const handleSaveAnnotations = async (
+    annotatedDoc: PDFDocument
   ) => {
-    const { docId, pageIndex } = annotatingPageInfo!;
-    const originalSourceDoc = sourceDocs[docId];
+    const { docId, pageIndex, targetPageId } = annotatingPageInfo!;
+    
+    setSourceDocs((prev) => {
+        const originalDoc = prev[docId];
+        if (!originalDoc) return prev;
+        const newDoc = { ...originalDoc, doc: annotatedDoc };
+        return { ...prev, [docId]: newDoc };
+    });
 
-    const newDocId = getUniqueId();
-    const newSourceDoc: SourceDoc = {
-      ...originalSourceDoc,
-      id: newDocId,
-      doc: pdfDocWithAnnotations,
-      thumbnailUrls: [...originalSourceDoc.thumbnailUrls],
-    };
-
-    setSourceDocs((prev) => ({ ...prev, [newDocId]: newSourceDoc }));
-    setTargetPages((prev) =>
-      prev.map((p) => (p.id === targetPageId ? { ...p, docId: newDocId } : p))
-    );
-
-    await updatePageThumbnail(newDocId, pageIndex, pdfDocWithAnnotations);
+    await updatePageThumbnail(docId, pageIndex, annotatedDoc);
 
     toast({
       title: "Annotations Saved",
@@ -732,17 +795,29 @@ export function PdfComposer({
                   </Tooltip>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                  <Button onClick={() => sourceFileInputRef.current?.click()}>
-                    <Plus className="mr-2 h-4 w-4" /> Add PDF
-                  </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add PDF document in the source documents list.</p>
-                  </TooltipContent>
-                </Tooltip>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                 <div className="flex gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                      <Button onClick={() => sourceFileInputRef.current?.click()}>
+                        <Plus className="mr-2 h-4 w-4" /> Add PDF
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Add PDF document in the source documents list.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" onClick={() => imageFileInputRef.current?.click()}>
+                          <ImageIcon className="mr-2 h-4 w-4" /> Add Image
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Add JPG/PNG images to be converted into PDF pages.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                </div>
                 <p className="flex-grow text-right text-xs text-muted-foreground">
                     Double-click or drag pages to compose.
                 </p>
@@ -754,6 +829,14 @@ export function PdfComposer({
                 className="hidden"
                 accept="application/pdf"
               />
+               <input
+                    type="file"
+                    ref={imageFileInputRef}
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    accept="image/png, image/jpeg"
+                    multiple
+                />
             </CardHeader>
             <CardContent className="flex-grow gap-4 p-4">
               <ScrollArea className="h-[52vh] rounded-md border p-4">
@@ -775,6 +858,7 @@ export function PdfComposer({
                                 <p>Delete document</p>
                               </TooltipContent>
                             </Tooltip>
+                            {doc.getPageCount() > 1 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7"
@@ -788,8 +872,9 @@ export function PdfComposer({
                                 <p>Add all pages to new document</p>
                               </TooltipContent>
                             </Tooltip>
+                            )}
                           </div>
-                          <h3 className="font-small text-xs text-foreground">{filename}</h3>
+                          <h3 className="font-small truncate text-right text-xs text-foreground" title={filename}>{filename}</h3>
                         </div>
                         <div
                           className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
@@ -814,8 +899,8 @@ export function PdfComposer({
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
                       <Upload className="mb-4 h-12 w-12" />
-                      <p className="font-semibold">Upload a source PDF</p>
-                      <p className="text-sm">Click "Add PDF" to get started.</p>
+                      <p className="font-semibold">Upload a source PDF or Image</p>
+                      <p className="text-sm">Click "Add PDF" or "Add Image" to get started.</p>
                     </div>
                   )}
                 </div>
@@ -954,7 +1039,7 @@ export function PdfComposer({
             pdfDoc={sourceDocs[annotatingPageInfo.docId].doc}
             pageIndex={annotatingPageInfo.pageIndex}
             onSave={(annotatedDoc) =>
-              handleSaveAnnotations(annotatingPageInfo.targetPageId, annotatedDoc)
+              handleSaveAnnotations(annotatedDoc)
             }
         />
       )}
