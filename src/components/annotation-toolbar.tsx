@@ -1,7 +1,7 @@
 
 "use client";
 
-import { MousePointer2, Type, Pen } from 'lucide-react';
+import { MousePointer2, Type, Pen, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Label } from './ui/label';
@@ -20,6 +20,8 @@ interface AnnotationToolbarProps {
     setStrokeColor: (color: string) => void;
     strokeWidth: number;
     setStrokeWidth: (width: number) => void;
+    zoom: number;
+    setZoom: (zoom: number | ((prevZoom: number) => number)) => void;
 }
 
 export function AnnotationToolbar({
@@ -33,9 +35,11 @@ export function AnnotationToolbar({
     setStrokeColor,
     strokeWidth,
     setStrokeWidth,
+    zoom,
+    setZoom,
 }: AnnotationToolbarProps) {
   return (
-    <div className="flex items-center gap-2 rounded-md border bg-card p-2 shadow-sm">
+    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2 shadow-sm">
       {/* Tool Selection */}
       <Button
         variant={activeTool === 'select' ? 'secondary' : 'ghost'}
@@ -65,7 +69,7 @@ export function AnnotationToolbar({
       
       {/* Text Tool Options */}
       <div className={cn("flex items-center gap-2", activeTool !== 'text' && "opacity-50 pointer-events-none")}>
-        <Label htmlFor="font-color">Color</Label>
+        <Label htmlFor="font-color" className="sr-only">Color</Label>
         <Input
           id="font-color"
           type="color"
@@ -74,7 +78,7 @@ export function AnnotationToolbar({
           className="h-8 w-10 p-1"
           disabled={activeTool !== 'text'}
         />
-        <Label htmlFor="font-size">Size</Label>
+        <Label htmlFor="font-size" className="sr-only">Size</Label>
         <Select
           value={fontSize.toString()}
           onValueChange={(val) => setFontSize(Number(val))}
@@ -95,7 +99,7 @@ export function AnnotationToolbar({
       
       {/* Pen Tool Options */}
       <div className={cn("flex items-center gap-2", activeTool !== 'pen' && "opacity-50 pointer-events-none")}>
-        <Label htmlFor="stroke-color">Color</Label>
+        <Label htmlFor="stroke-color" className="sr-only">Color</Label>
         <Input
           id="stroke-color"
           type="color"
@@ -104,7 +108,7 @@ export function AnnotationToolbar({
           className="h-8 w-10 p-1"
           disabled={activeTool !== 'pen'}
         />
-        <Label htmlFor="stroke-width">Width</Label>
+        <Label htmlFor="stroke-width" className="sr-only">Width</Label>
          <Select
           value={strokeWidth.toString()}
           onValueChange={(val) => setStrokeWidth(Number(val))}
@@ -120,6 +124,17 @@ export function AnnotationToolbar({
           </SelectContent>
         </Select>
       </div>
+      <div className="flex-grow" />
+       {/* Zoom Controls */}
+       <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.max(0.25, z - 0.25))} disabled={zoom <= 0.25}>
+                <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="w-16 text-center text-sm font-medium tabular-nums">{Math.round(zoom * 100)}%</span>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(3, z + 0.25))} disabled={zoom >= 3}>
+                <ZoomIn className="h-4 w-4" />
+            </Button>
+        </div>
     </div>
   );
 }

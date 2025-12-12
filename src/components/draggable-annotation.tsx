@@ -1,15 +1,23 @@
 
 "use client";
 
+import React from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { Trash2 } from "lucide-react";
 import type { TextAnnotation } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 interface DraggableAnnotationProps {
     annotation: TextAnnotation;
+    isSelected: boolean;
+    onSelect: () => void;
+    onDelete: () => void;
+    onTextChange: (newText: string) => void;
 }
 
-export function DraggableAnnotation({ annotation }: DraggableAnnotationProps) {
+export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete, onTextChange }: DraggableAnnotationProps) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: annotation.id,
     });
@@ -21,9 +29,14 @@ export function DraggableAnnotation({ annotation }: DraggableAnnotationProps) {
         transform: CSS.Translate.toString(transform),
         color: annotation.fontColor,
         fontSize: `${annotation.fontSize}px`,
-        border: '1px dashed blue', // For visibility
+        width: annotation.width,
+        minHeight: annotation.height,
         padding: '2px',
     };
+    
+    const stopPropagation = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    }
 
     return (
         <div
@@ -31,12 +44,34 @@ export function DraggableAnnotation({ annotation }: DraggableAnnotationProps) {
             style={style}
             {...listeners}
             {...attributes}
-            onDoubleClick={(e) => e.stopPropagation()} // Prevent creating new annotation
+            onClick={(e) => {
+                stopPropagation(e);
+                onSelect();
+            }}
+            onDoubleClick={stopPropagation}
+            className={cn("group cursor-move border border-dashed", isSelected ? "border-primary z-10" : "border-transparent hover:border-primary/50")}
         >
-            <textarea
+             <textarea
                 defaultValue={annotation.text}
-                style={{ all: 'unset', width: annotation.width, height: annotation.height, cursor: 'text' }}
+                onChange={(e) => onTextChange(e.target.value)}
+                onFocus={onSelect}
+                style={{ all: 'unset', width: '100%', height: '100%', cursor: 'text' }}
+                className="resize-none"
             />
+            {isSelected && (
+                 <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-3 -right-3 h-6 w-6 cursor-pointer rounded-full opacity-0 group-hover:opacity-100"
+                    onClick={(e) => {
+                        stopPropagation(e);
+                        onDelete();
+                    }}
+                    aria-label="Delete annotation"
+                 >
+                    <Trash2 className="h-4 w-4" />
+                 </Button>
+            )}
         </div>
     );
 }
