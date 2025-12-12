@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Trash2 } from "lucide-react";
@@ -21,6 +21,8 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: annotation.id,
     });
+    
+    const [isPlaceholder, setIsPlaceholder] = useState(annotation.text === "Type here...");
 
     const style = {
         position: 'absolute' as const,
@@ -38,6 +40,21 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         e.stopPropagation();
     }
 
+    const handleFocus = () => {
+        onSelect();
+        if (isPlaceholder) {
+            onTextChange('');
+            setIsPlaceholder(false);
+        }
+    };
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isPlaceholder) {
+            setIsPlaceholder(false);
+        }
+        onTextChange(e.target.value);
+    };
+
     return (
         <div
             ref={setNodeRef}
@@ -53,9 +70,9 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         >
              <input
                 type="text"
-                defaultValue={annotation.text}
-                onChange={(e) => onTextChange(e.target.value)}
-                onFocus={onSelect}
+                value={annotation.text}
+                onChange={handleChange}
+                onFocus={handleFocus}
                 style={{ all: 'unset', width: '100%', height: '100%', cursor: 'text' }}
                 className="bg-transparent"
             />
