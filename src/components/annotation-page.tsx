@@ -61,11 +61,11 @@ export function AnnotationPage({
 
   const pageContainerRef = useRef<HTMLDivElement>(null);
   
-  const sensors = useSensor(PointerSensor, {
+  const sensors = [useSensor(PointerSensor, {
     activationConstraint: {
       distance: 5,
     },
-  });
+  })];
 
   const renderPage = useCallback(async () => {
     setIsLoading(true);
@@ -218,7 +218,7 @@ export function AnnotationPage({
                 <Loader className="h-8 w-8 animate-spin" />
               </div>
             ) : (
-                <DndContext sensors={[sensors]} onDragEnd={handleDragEnd}>
+                <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
                     <div
                       ref={pageContainerRef}
                       className="relative mx-auto"

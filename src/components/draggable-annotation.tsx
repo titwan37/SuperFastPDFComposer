@@ -30,7 +30,7 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         color: annotation.fontColor,
         fontSize: `${annotation.fontSize}px`,
         width: annotation.width,
-        minHeight: annotation.height,
+        height: annotation.height,
         padding: '2px',
     };
     
@@ -51,12 +51,13 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
             onDoubleClick={stopPropagation}
             className={cn("group cursor-move border border-dashed", isSelected ? "border-primary z-10" : "border-transparent hover:border-primary/50")}
         >
-             <textarea
+             <input
+                type="text"
                 defaultValue={annotation.text}
                 onChange={(e) => onTextChange(e.target.value)}
                 onFocus={onSelect}
                 style={{ all: 'unset', width: '100%', height: '100%', cursor: 'text' }}
-                className="resize-none"
+                className="bg-transparent"
             />
             {isSelected && (
                  <Button
