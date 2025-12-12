@@ -3,12 +3,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { PDFDocument } from "pdf-lib";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader } from "lucide-react";
 import { AnnotationToolbar } from "./annotation-toolbar";
 import { DraggableAnnotation } from "./draggable-annotation";
 import type { Annotation, TextAnnotation } from "@/lib/types";
+
+// pdf.js worker configuration
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
+}
 
 interface AnnotationPageProps {
   isOpen: boolean;
@@ -38,20 +44,31 @@ export function AnnotationPage({ isOpen, onClose, pdfDoc, pageIndex, onSave }: A
     if (isOpen) {
       setIsLoading(true);
       const renderPage = async () => {
-        const page = pdfDoc.getPages()[pageIndex];
-        // This is a simplified rendering for the background. We can improve quality later.
-        const viewport = { width: page.getWidth(), height: page.getHeight() };
+        // Save the pdf-lib document to a buffer
+        const pdfBytes = await pdfDoc.save();
+        // Load the PDF with pdf.js
+        const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
+        const page = await pdfjsDoc.getPage(pageIndex + 1);
+        
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale });
 
         const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
+        const context = canvas.getContext("2d");
         canvas.height = viewport.height;
-        // In a real implementation, we would use pdf.js to render the page to canvas
-        // For now, we just use a white background to represent the page.
-        const context = canvas.getContext("2d")!;
-        context.fillStyle = "white";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.strokeStyle = "black";
-        context.strokeRect(0,0, canvas.width, canvas.height);
+        canvas.width = viewport.width;
+
+        if (!context) {
+            setIsLoading(false);
+            return;
+        }
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+        
+        await page.render(renderContext).promise;
 
         setPageImageUrl(canvas.toDataURL());
         setIsLoading(false);
@@ -121,10 +138,9 @@ export function AnnotationPage({ isOpen, onClose, pdfDoc, pageIndex, onSave }: A
                 <div 
                     ref={pageContainerRef}
                     className="relative"
-                    style={{ width: pdfDoc.getPages()[pageIndex].getWidth(), height: pdfDoc.getPages()[pageIndex].getHeight() }}
                     onClick={handlePageClick}
                 >
-                    <img src={pageImageUrl} alt={`Page ${pageIndex + 1}`} className="w-full h-full" />
+                    <img src={pageImageUrl} alt={`Page ${pageIndex + 1}`} className="w-full h-auto" />
                     {/* Drawing canvas would go here */}
 
                     {/* Text Annotations */}
