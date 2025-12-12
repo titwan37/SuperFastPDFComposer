@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { PDFDocument, rgb, StandardFonts, line, c, degrees, moveTo, lineTo } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   DndContext,
@@ -121,10 +121,6 @@ export function AnnotationPage({
       const font = await finalDoc.embedFont(StandardFonts.Helvetica);
 
       for (const anno of annotations) {
-        const [r, g, b] = anno.strokeColor
-            ? anno.strokeColor.substring(1).match(/.{2}/g)!.map((hex) => parseInt(hex, 16) / 255)
-            : [0, 0, 0];
-        
         if (anno.type === "text") {
           const textAnno = anno as TextAnnotation;
           const [r, g, b] = textAnno.fontColor
@@ -142,9 +138,15 @@ export function AnnotationPage({
         }
         if (anno.type === "icon") {
           const iconAnno = anno as IconAnnotation;
-          const iconSize = iconAnno.size;
+           const [r, g, b] = iconAnno.strokeColor
+            .substring(1)
+            .match(/.{2}/g)!
+            .map((hex) => parseInt(hex, 16) / 255);
+          
+          const iconSize = iconAnno.size / zoom;
           const x = iconAnno.x / zoom;
-          const y = height - (iconAnno.y / zoom) - (iconSize);
+          const y = height - (iconAnno.y / zoom) - iconSize;
+
           if (iconAnno.iconType === 'check') {
              page.drawSvgPath(
               `M${x} ${y + iconSize / 2} L${x + iconSize / 3} ${y} L${x + iconSize} ${y + iconSize}`, {
