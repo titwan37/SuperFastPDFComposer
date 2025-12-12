@@ -65,6 +65,7 @@ export function AnnotationToolbar({
         size="icon"
         onClick={() => setActiveTool('pen')}
         aria-label="Pen Tool"
+        disabled
       >
         <Pen className="h-5 w-5" />
       </Button>
@@ -150,7 +151,7 @@ export function AnnotationToolbar({
                 <ZoomOut className="h-4 w-4" />
             </Button>
             <span className="w-16 text-center text-sm font-medium tabular-nums">{Math.round(zoom * 100)}%</span>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(3, z + 0.25))} disabled={zoom >= 3}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(2, z + 0.25))} disabled={zoom >= 2}>
                 <ZoomIn className="h-4 w-4" />
             </Button>
         </div>

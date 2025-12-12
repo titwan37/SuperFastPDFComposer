@@ -53,6 +53,7 @@ export function AnnotationPage({
   const [activeTool, setActiveTool] = useState<'select' | 'text' | 'pen' | 'check' | 'cross'>("select");
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [pageDimensions, setPageDimensions] = useState<{width: number, height: number, renderedWidth: number, renderedHeight: number}>({width: 0, height: 0, renderedWidth: 0, renderedHeight: 0});
 
   // Style for the currently active tool
   const [textColor, setTextColor] = useState("#000000");
@@ -67,16 +68,24 @@ export function AnnotationPage({
       distance: 5,
     },
   })];
+  
+  const RENDER_SCALE = 3; // Increase for better quality
 
   const renderPage = useCallback(async () => {
     setIsLoading(true);
-    // Use a copy to avoid modifying the original doc before saving
     const tempDoc = await pdfDoc.copy();
     const pdfBytes = await tempDoc.save();
     const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
     const page = await pdfjsDoc.getPage(pageIndex + 1);
+    const originalViewport = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: RENDER_SCALE });
 
-    const viewport = page.getViewport({ scale: zoom });
+    setPageDimensions({
+        width: originalViewport.width,
+        height: originalViewport.height,
+        renderedWidth: viewport.width,
+        renderedHeight: viewport.height,
+    });
 
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
@@ -97,7 +106,7 @@ export function AnnotationPage({
 
     setPageImageUrl(canvas.toDataURL());
     setIsLoading(false);
-  }, [pdfDoc, pageIndex, zoom]);
+  }, [pdfDoc, pageIndex]);
 
   useEffect(() => {
     if (isOpen) {
@@ -105,12 +114,6 @@ export function AnnotationPage({
       setAnnotations([]); // Reset annotations when a new page is opened
     }
   }, [isOpen, pdfDoc, pageIndex, renderPage]);
-
-  useEffect(() => {
-    if (isOpen) {
-        renderPage();
-    }
-  }, [zoom, isOpen, renderPage]);
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -121,6 +124,8 @@ export function AnnotationPage({
       const font = await finalDoc.embedFont(StandardFonts.Helvetica);
 
       for (const anno of annotations) {
+        const scaleFactor = pageDimensions.width / (pageDimensions.renderedWidth * zoom);
+        
         if (anno.type === "text") {
           const textAnno = anno as TextAnnotation;
           const [r, g, b] = textAnno.fontColor
@@ -128,9 +133,12 @@ export function AnnotationPage({
             .match(/.{2}/g)!
             .map((hex) => parseInt(hex, 16) / 255);
             
+          const x = textAnno.x * scaleFactor;
+          const y = height - (textAnno.y * scaleFactor) - (textAnno.fontSize * 1); // Adjust for font size offset from bottom
+            
           page.drawText(textAnno.text, {
-            x: textAnno.x / zoom,
-            y: height - (textAnno.y / zoom) - (textAnno.fontSize), // Adjust y-coordinate
+            x,
+            y,
             font: font,
             size: textAnno.fontSize,
             color: rgb(r, g, b),
@@ -143,13 +151,13 @@ export function AnnotationPage({
             .match(/.{2}/g)!
             .map((hex) => parseInt(hex, 16) / 255);
           
-          const iconSize = iconAnno.size / zoom;
-          const x = iconAnno.x / zoom;
-          const y = height - (iconAnno.y / zoom) - iconSize;
+          const iconSize = iconAnno.size * scaleFactor;
+          const x = iconAnno.x * scaleFactor;
+          const y = height - (iconAnno.y * scaleFactor) - iconSize;
 
           if (iconAnno.iconType === 'check') {
              page.drawSvgPath(
-              `M${x} ${y + iconSize / 2} L${x + iconSize / 3} ${y} L${x + iconSize} ${y + iconSize}`, {
+              `M${x} ${y + iconSize / 2} L${x + iconSize / 3} ${y} L${x + iconSize} ${y + iconSize * 0.8}`, {
                 borderColor: rgb(r, g, b),
                 borderWidth: iconAnno.strokeWidth,
               }
@@ -202,8 +210,8 @@ export function AnnotationPage({
         id: `icon-${Date.now()}`,
         type: 'icon',
         iconType: activeTool,
-        x: x,
-        y: y,
+        x: x - 15, // center icon
+        y: y - 15, // center icon
         size: 30,
         strokeColor: strokeColor,
         strokeWidth: strokeWidth,
@@ -259,7 +267,7 @@ export function AnnotationPage({
             zoom={zoom}
             setZoom={setZoom}
           />
-          <div className="flex-grow relative overflow-auto border rounded-md">
+          <div className="flex-grow relative overflow-auto border rounded-md bg-muted/20">
             {isLoading || !pageImageUrl ? (
               <div className="flex h-full items-center justify-center">
                 <Loader className="h-8 w-8 animate-spin" />
@@ -269,13 +277,16 @@ export function AnnotationPage({
                     <div
                       ref={pageContainerRef}
                       className="relative mx-auto"
-                      style={{ width: `calc(100% * ${zoom})`}}
+                      style={{ 
+                        width: pageDimensions.renderedWidth * zoom,
+                        height: pageDimensions.renderedHeight * zoom
+                       }}
                       onClick={handlePageClick}
                     >
                       <img
                         src={pageImageUrl}
                         alt={`Page ${pageIndex + 1}`}
-                        className="w-full h-auto"
+                        className="w-full h-full"
                       />
                        {annotations.map((anno) => {
                         if (anno.type === 'text') {
