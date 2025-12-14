@@ -55,24 +55,8 @@ export function AnnotationPage({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
-  const activeToolRef = useRef(activeTool);
-
-  useEffect(() => {
-    activeToolRef.current = activeTool;
-  }, [activeTool]);
 
   const RENDER_SCALE = 3; // Increase for better quality
-
-  const updateToolbarForSelection = useCallback((obj: fabric.Object) => {
-    if (obj.type === 'textbox') {
-      const textbox = obj as fabric.Textbox;
-      setTextColor(textbox.fill as string || '#000000');
-      setFontSize(textbox.fontSize || 16);
-      setFontFamily(textbox.fontFamily || 'Arial');
-      setIsBold(textbox.fontWeight === 'bold');
-      setIsItalic(textbox.fontStyle === 'italic');
-    }
-  }, []);
 
   const renderPage = useCallback(async (canvas: fabric.Canvas) => {
     setIsLoading(true);
@@ -116,39 +100,94 @@ export function AnnotationPage({
     }
   }, [pdfDoc, pageIndex]);
 
-  // Effect to initialize the canvas and its listeners
-  useEffect(() => {
-    if (isOpen && canvasRef.current) {
-      const canvas = new fabric.Canvas(canvasRef.current);
-      fabricCanvasRef.current = canvas;
-      
-      renderPage(canvas);
-
-      const handleMouseDown = (options: fabric.IEvent<MouseEvent>) => {
-        if (!options.target) {
-            const tool = activeToolRef.current;
-            if (tool === 'text') {
-                addTextAnnotation(options.pointer!.x, options.pointer!.y);
-            }
-        }
-      };
-
-      canvas.on('mouse:down', handleMouseDown);
-      
-      canvas.on('selection:created', (e) => {
-        if (e.target) updateToolbarForSelection(e.target);
-      });
-      canvas.on('selection:updated', (e) => {
-        if (e.target) updateToolbarForSelection(e.target);
-      });
-
-      return () => {
-        canvas.off('mouse:down', handleMouseDown);
-        canvas.dispose();
-        fabricCanvasRef.current = null;
-      };
+  const updateToolbarForSelection = useCallback((obj: fabric.Object) => {
+    if (obj.type === 'textbox') {
+      const textbox = obj as fabric.Textbox;
+      setTextColor(textbox.fill as string || '#000000');
+      setFontSize(textbox.fontSize || 16);
+      setFontFamily(textbox.fontFamily || 'Arial');
+      setIsBold(textbox.fontWeight === 'bold');
+      setIsItalic(textbox.fontStyle === 'italic');
     }
-  }, [isOpen, updateToolbarForSelection, renderPage]);
+  }, []);
+
+  const addTextAnnotation = (x: number, y: number) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    const textbox = new fabric.Textbox("Type here...", {
+      left: x,
+      top: y,
+      width: 200,
+      fontSize,
+      fontFamily,
+      fill: textColor,
+      fontWeight: isBold ? 'bold' : 'normal',
+      fontStyle: isItalic ? 'italic' : 'normal',
+      splitByGrapheme: isTextWrapping,
+      // custom property
+      autoSized: !isTextWrapping,
+    });
+    
+    textbox.on('editing:entered', () => {
+      if (textbox.text === 'Type here...') {
+        textbox.text = '';
+        textbox.set('width', 100);
+        canvas.renderAll();
+      }
+    });
+
+    textbox.on('changed', () => {
+      if ((textbox as any).autoSized && textbox.width) {
+        textbox.set('width', textbox.getOptimalSize().width);
+      }
+    });
+    
+    canvas.add(textbox);
+    canvas.setActiveObject(textbox);
+    textbox.enterEditing();
+    canvas.renderAll();
+    setActiveTool('select');
+  };
+
+  // Main effect to initialize canvas and listeners
+  useEffect(() => {
+    if (!isOpen || !canvasRef.current) {
+      return;
+    }
+    
+    const canvas = new fabric.Canvas(canvasRef.current);
+    fabricCanvasRef.current = canvas;
+
+    renderPage(canvas);
+
+    const handleMouseDown = (options: fabric.IEvent<MouseEvent>) => {
+      // Use the ref here to get the latest value
+      const tool = activeTool;
+      if (!options.target && tool === 'text') {
+        const pointer = canvas.getPointer(options.e);
+        addTextAnnotation(pointer.x, pointer.y);
+      }
+    };
+
+    const handleSelection = (e: fabric.IEvent<MouseEvent>) => {
+      if (e.target) {
+        updateToolbarForSelection(e.target);
+      }
+    };
+
+    canvas.on('mouse:down', handleMouseDown);
+    canvas.on('selection:created', handleSelection);
+    canvas.on('selection:updated', handleSelection);
+
+    return () => {
+      canvas.off('mouse:down', handleMouseDown);
+      canvas.off('selection:created', handleSelection);
+      canvas.off('selection:updated', handleSelection);
+      canvas.dispose();
+      fabricCanvasRef.current = null;
+    };
+  }, [isOpen, pdfDoc, pageIndex, renderPage, updateToolbarForSelection, activeTool]); // Add activeTool here
 
   
   useEffect(() => {
@@ -198,45 +237,6 @@ export function AnnotationPage({
       applyStyleToSelection({ width: undefined, splitByGrapheme: false, autoSized: true });
     }
   }, [isTextWrapping]);
-  
-  const addTextAnnotation = (x: number, y: number) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-
-    const textbox = new fabric.Textbox("Type here...", {
-      left: x,
-      top: y,
-      width: 200,
-      fontSize,
-      fontFamily,
-      fill: textColor,
-      fontWeight: isBold ? 'bold' : 'normal',
-      fontStyle: isItalic ? 'italic' : 'normal',
-      splitByGrapheme: isTextWrapping,
-      // custom property
-      autoSized: !isTextWrapping,
-    });
-    
-    textbox.on('editing:entered', () => {
-      if (textbox.text === 'Type here...') {
-        textbox.text = '';
-        textbox.set('width', 100);
-        canvas.renderAll();
-      }
-    });
-
-    textbox.on('changed', () => {
-      if ((textbox as any).autoSized && textbox.width) {
-        textbox.set('width', textbox.getOptimalSize().width);
-      }
-    });
-    
-    canvas.add(textbox);
-    canvas.setActiveObject(textbox);
-    textbox.enterEditing();
-    canvas.renderAll();
-    setActiveTool('select');
-  };
   
   const deleteSelected = () => {
     const canvas = fabricCanvasRef.current;
@@ -378,3 +378,5 @@ export function AnnotationPage({
     </Dialog>
   );
 }
+
+    

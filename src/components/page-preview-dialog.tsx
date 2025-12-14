@@ -49,24 +49,19 @@ export function PagePreviewDialog({
       const viewport = page.getViewport({ scale: 1 });
       const scale = desiredWidth / viewport.width;
       const scaledViewport = page.getViewport({ scale });
-
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
-      
       if (!context) {
         console.error("Could not get 2d context from canvas");
         setIsLoading(false);
         return;
       }
-
       canvas.height = scaledViewport.height;
       canvas.width = scaledViewport.width;
-
       const renderContext = {
         canvasContext: context,
         viewport: scaledViewport,
       };
-
       await page.render(renderContext).promise;
     } catch (e) {
       console.error("Failed to render page preview", e);
