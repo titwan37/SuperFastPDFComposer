@@ -40,7 +40,7 @@ export function PagePreviewDialog({
     setIsLoading(true);
     try {
       const page = await pdfDoc.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.5 }); // High-quality render
+      const viewport = page.getViewport({ scale: 1.0 }); // Render at 100% scale first
 
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
@@ -70,11 +70,11 @@ export function PagePreviewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Page {pageNumber} Preview</DialogTitle>
         </DialogHeader>
-        <div className="relative flex items-center justify-center p-4 overflow-auto bg-muted/20 rounded-md border min-h-[60vh]">
+        <div className="relative flex-grow items-center justify-center p-4 overflow-auto bg-muted/20 rounded-md border">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50">
               <Loader className="h-8 w-8 animate-spin" />
@@ -83,10 +83,16 @@ export function PagePreviewDialog({
           <canvas
             ref={canvasRef}
             className="rounded-md shadow-md"
-            style={{ width: "100%", height: "auto" }}
+            style={{ 
+              width: "100%", 
+              height: "auto",
+              display: isLoading ? 'none' : 'block'
+            }}
           />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+    
