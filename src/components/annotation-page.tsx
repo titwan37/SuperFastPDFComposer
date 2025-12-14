@@ -152,7 +152,6 @@ export function AnnotationPage({
     canvas.setActiveObject(textbox);
     textbox.enterEditing();
     canvas.renderAll();
-    setActiveTool('select');
   };
 
   // Main effect to initialize canvas and listeners
@@ -369,7 +368,7 @@ export function AnnotationPage({
             setZoom={setZoom}
             onDelete={deleteSelected}
           />
-          <div className="flex-grow relative overflow-auto border rounded-md bg-muted/20 flex items-center justify-center">
+          <div className="flex-grow relative overflow-auto border rounded-md bg-muted/20 flex justify-center">
             {isLoading && (
               <div className="absolute inset-0 z-10 flex h-full items-center justify-center bg-background/50">
                 <Loader className="h-8 w-8 animate-spin" />
