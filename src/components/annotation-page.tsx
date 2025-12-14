@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import { fabric } from 'fabric';
+import type { Dispatch, SetStateAction } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -125,9 +126,9 @@ export function AnnotationPage({
       fontWeight: isBold ? 'bold' : 'normal',
       fontStyle: isItalic ? 'italic' : 'normal',
       splitByGrapheme: isTextWrapping,
-      // custom property
-      autoSized: !isTextWrapping,
     });
+    // Add custom property
+    (textbox as any).autoSized = !isTextWrapping;
     
     textbox.on('editing:entered', () => {
       if (textbox.text === 'Type here...') {
@@ -139,7 +140,7 @@ export function AnnotationPage({
 
     textbox.on('changed', () => {
       if ((textbox as any).autoSized && textbox.width) {
-        textbox.set('width', textbox.getOptimalSize().width);
+        textbox.set('width', (textbox as any).getOptimalSize().width);
       }
     });
     
@@ -161,7 +162,7 @@ export function AnnotationPage({
 
     renderPage(canvas);
 
-    const handleMouseDown = (options: fabric.IEvent<MouseEvent>) => {
+    const handleMouseDown = (options: fabric.IEvent) => {
       // Use the ref here to get the latest value
       const tool = activeTool;
       if (!options.target && tool === 'text') {
@@ -170,20 +171,20 @@ export function AnnotationPage({
       }
     };
 
-    const handleSelection = (e: fabric.IEvent<MouseEvent>) => {
+    const handleSelection = (e: fabric.IEvent) => {
       if (e.target) {
         updateToolbarForSelection(e.target);
       }
     };
 
-    canvas.on('mouse:down', handleMouseDown);
-    canvas.on('selection:created', handleSelection);
-    canvas.on('selection:updated', handleSelection);
+    canvas.on('mouse:down', handleMouseDown as (e: fabric.IEvent<Event>) => void);
+    canvas.on('selection:created', handleSelection as (e: fabric.IEvent<Event>) => void);
+    canvas.on('selection:updated', handleSelection as (e: fabric.IEvent<Event>) => void);
 
     return () => {
-      canvas.off('mouse:down', handleMouseDown);
-      canvas.off('selection:created', handleSelection);
-      canvas.off('selection:updated', handleSelection);
+      canvas.off('mouse:down');
+      canvas.off('selection:created');
+      canvas.off('selection:updated');
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -218,8 +219,8 @@ export function AnnotationPage({
     const activeObject = canvas.getActiveObject();
     if (activeObject instanceof fabric.Textbox) {
       activeObject.set(style);
-      if ('autoSized' in style) {
-        (activeObject as any).autoSized = style.autoSized;
+      if ('autoSized' in (style as any)) {
+        (activeObject as any).autoSized = (style as any).autoSized;
       }
       canvas.renderAll();
     }
@@ -232,9 +233,9 @@ export function AnnotationPage({
   useEffect(() => { applyStyleToSelection({ fontStyle: isItalic ? 'italic' : 'normal' }) }, [isItalic]);
   useEffect(() => { 
     if (isTextWrapping) {
-      applyStyleToSelection({ width: 200, splitByGrapheme: true, autoSized: false });
+      applyStyleToSelection({ width: 200, splitByGrapheme: true, ...( {autoSized: false} as any) });
     } else {
-      applyStyleToSelection({ width: undefined, splitByGrapheme: false, autoSized: true });
+      applyStyleToSelection({ width: undefined, splitByGrapheme: false, ...( {autoSized: true} as any) });
     }
   }, [isTextWrapping]);
   
@@ -378,5 +379,3 @@ export function AnnotationPage({
     </Dialog>
   );
 }
-
-    
