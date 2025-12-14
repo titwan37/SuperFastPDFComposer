@@ -143,6 +143,7 @@ export function AnnotationPage({
     });
 
     textbox.on('changed', () => {
+      canvas.renderAll();
       if ((textbox as any).autoSized && textbox.width) {
         textbox.set('width', (textbox as any).getOptimalSize().width);
       }
@@ -188,9 +189,9 @@ export function AnnotationPage({
         }
       };
 
-      canvas.on('mouse:down', handleMouseDown as (e: fabric.IEvent<Event>) => void);
-      canvas.on('selection:created', handleSelection as (e: fabric.IEvent<Event>) => void);
-      canvas.on('selection:updated', handleSelection as (e: fabric.IEvent<Event>) => void);
+      canvas.on('mouse:down', handleMouseDown);
+      canvas.on('selection:created', handleSelection);
+      canvas.on('selection:updated', handleSelection);
 
     }, 100); // Small delay to ensure canvas element is mounted
 
@@ -399,3 +400,5 @@ export function AnnotationPage({
     </Dialog>
   );
 }
+
+    
