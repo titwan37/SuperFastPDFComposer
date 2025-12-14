@@ -91,6 +91,7 @@ export function AnnotationPage({
 
         if (!context) {
           setIsLoading(false);
+          console.error("Could not get 2d context for page rendering.");
           return;
         }
 
@@ -109,7 +110,7 @@ export function AnnotationPage({
                 scaleY: canvas.height! / img.height!,
             });
             setIsLoading(false);
-        });
+        }, { crossOrigin: 'anonymous' });
     } catch (e) {
       console.error("Failed to render page", e);
       setIsLoading(false);
@@ -154,15 +155,21 @@ export function AnnotationPage({
     if (!canvas) return;
     
     if (activeTool === 'select') {
+      canvas.isDrawingMode = false;
       canvas.selection = true;
       canvas.forEachObject(obj => obj.set({ selectable: true }));
+    } else if (activeTool === 'pen') {
+      canvas.isDrawingMode = true;
+      canvas.freeDrawingBrush.color = strokeColor;
+      canvas.freeDrawingBrush.width = strokeWidth;
     } else {
+      canvas.isDrawingMode = false;
       canvas.selection = false;
       canvas.forEachObject(obj => obj.set({ selectable: false }));
     }
     canvas.renderAll();
 
-  }, [activeTool]);
+  }, [activeTool, strokeColor, strokeWidth]);
 
 
   const applyStyleToSelection = (style: Partial<fabric.ITextboxOptions>) => {

@@ -36,22 +36,35 @@ export function PagePreviewDialog({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current) return;
+    if (!pdfDoc || !canvasRef.current) {
+        setIsLoading(false);
+        return;
+    };
     setIsLoading(true);
+
     try {
       const page = await pdfDoc.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.0 }); // Render at 100% scale first
+      // Adjust scale for better resolution in the preview
+      const desiredWidth = 800;
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = desiredWidth / viewport.width;
+      const scaledViewport = page.getViewport({ scale });
 
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
-      if (!context) return;
+      
+      if (!context) {
+        console.error("Could not get 2d context from canvas");
+        setIsLoading(false);
+        return;
+      }
 
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      canvas.height = scaledViewport.height;
+      canvas.width = scaledViewport.width;
 
       const renderContext = {
         canvasContext: context,
-        viewport: viewport,
+        viewport: scaledViewport,
       };
 
       await page.render(renderContext).promise;
@@ -64,7 +77,10 @@ export function PagePreviewDialog({
 
   useEffect(() => {
     if (isOpen) {
-      renderPage();
+      // Set a brief timeout to allow the dialog and canvas to mount properly
+      setTimeout(() => {
+        renderPage();
+      }, 100);
     }
   }, [isOpen, renderPage]);
 
@@ -74,18 +90,18 @@ export function PagePreviewDialog({
         <DialogHeader>
           <DialogTitle>Page {pageNumber} Preview</DialogTitle>
         </DialogHeader>
-        <div className="relative flex-grow items-center justify-center p-4 overflow-auto bg-muted/20 rounded-md border">
+        <div className="relative flex-grow flex items-center justify-center p-4 overflow-auto bg-muted/20 rounded-md border">
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
               <Loader className="h-8 w-8 animate-spin" />
             </div>
           )}
           <canvas
             ref={canvasRef}
             className="rounded-md shadow-md"
-            style={{ 
-              width: "100%", 
-              height: "auto",
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
               display: isLoading ? 'none' : 'block'
             }}
           />
@@ -94,5 +110,3 @@ export function PagePreviewDialog({
     </Dialog>
   );
 }
-
-    
