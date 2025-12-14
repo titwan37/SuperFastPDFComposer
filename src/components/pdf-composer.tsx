@@ -21,7 +21,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PDFDocument, rgb, PageSizes, type PDFJpgImage, type PDFPngImage} from "pdf-lib";
+import { PDFDocument, rgb, PageSizes, type PDFImage} from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   Upload,
@@ -417,7 +417,7 @@ export function PdfComposer({
             const page = pdfDoc.addPage(PageSizes.A4);
             const { width: pageW, height: pageH } = page.getSize();
 
-            let image: PDFJpgImage | PDFPngImage;
+            let image: PDFImage;
             if (file.type === 'image/jpeg') {
                 image = await pdfDoc.embedJpg(arrayBuffer);
             } else if (file.type === 'image/png') {
@@ -1046,6 +1046,8 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
 
     
 
