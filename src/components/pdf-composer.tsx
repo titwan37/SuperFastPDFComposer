@@ -112,8 +112,6 @@ function PageThumbnail({
   );
 }
 
-
-
 // Sub-component for a draggable page in the source pane
 function DraggableSourcePage({
   docId,
@@ -154,13 +152,13 @@ function DraggableSourcePage({
           thumbnailUrl={thumbnailUrl}
         />
       </div>
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute inset-0 flex items-start justify-end bg-black/40 p-1 opacity-0 transition-opacity group-hover:opacity-100">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 border-white/50 bg-black/20 text-white hover:bg-black/50 hover:text-white"
+              className="h-7 w-7 border-white/50 bg-black/20 text-white hover:bg-black/50 hover:text-white"
               onClick={onPreview}
               aria-label="Preview page"
             >
@@ -802,7 +800,8 @@ export function PdfComposer({
  const handleSaveAnnotations = async (
     annotatedDoc: PDFDocument
   ) => {
-    const { docId, pageIndex, targetPageId } = annotatingPageInfo!;
+    if (!annotatingPageInfo) return;
+    const { docId, pageIndex, targetPageId } = annotatingPageInfo;
     
     setSourceDocs((prev) => {
         const originalDoc = prev[docId];
