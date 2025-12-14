@@ -21,7 +21,8 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PDFDocument, rgb, PageSizes, JPGImage, PNGImage } from "pdf-lib";
+
+import { PDFDocument, rgb, PageSizes, type JPGImage, type PNGImage} from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   Upload,
@@ -1046,3 +1047,5 @@ export function PdfComposer({
     </TooltipProvider>
   );
 }
+
+    
