@@ -131,7 +131,7 @@ export function AnnotationPage({
       fontWeight: isBold ? 'bold' : 'normal',
       fontStyle: isItalic ? 'italic' : 'normal',
       splitByGrapheme: isTextWrapping,
-      ...({ autoSized: !isTextWrapping } as any)
+      ...(isTextWrapping ? {} : { width: undefined, autoSized: true } as any)
     });
     
     textbox.on('editing:entered', () => {
@@ -157,39 +157,52 @@ export function AnnotationPage({
 
   // Main effect to initialize canvas and listeners
   useEffect(() => {
-    if (!isOpen || !canvasRef.current) {
+    if (!isOpen) {
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
       return;
     }
-    
-    const canvas = new fabric.Canvas(canvasRef.current);
-    fabricCanvasRef.current = canvas;
 
-    renderPage(canvas);
-
-    const handleMouseDown = (options: fabric.IEvent) => {
-      const tool = activeToolRef.current;
-      if (!options.target && tool === 'text') {
-        const pointer = canvas.getPointer(options.e);
-        addTextAnnotation(pointer.x, pointer.y);
+    const timeoutId = setTimeout(() => {
+      if (!canvasRef.current) {
+        return;
       }
-    };
+      
+      const canvas = new fabric.Canvas(canvasRef.current);
+      fabricCanvasRef.current = canvas;
 
-    const handleSelection = (e: fabric.IEvent) => {
-      if (e.target) {
-        updateToolbarForSelection(e.target);
-      }
-    };
+      renderPage(canvas);
 
-    canvas.on('mouse:down', handleMouseDown as (e: fabric.IEvent<Event>) => void);
-    canvas.on('selection:created', handleSelection as (e: fabric.IEvent<Event>) => void);
-    canvas.on('selection:updated', handleSelection as (e: fabric.IEvent<Event>) => void);
+      const handleMouseDown = (options: fabric.IEvent) => {
+        const tool = activeToolRef.current;
+        if (!options.target && tool === 'text') {
+          const pointer = canvas.getPointer(options.e);
+          addTextAnnotation(pointer.x, pointer.y);
+        }
+      };
+
+      const handleSelection = (e: fabric.IEvent) => {
+        if (e.target) {
+          updateToolbarForSelection(e.target);
+        }
+      };
+
+      canvas.on('mouse:down', handleMouseDown);
+      canvas.on('selection:created', handleSelection);
+      canvas.on('selection:updated', handleSelection);
+
+    }, 100); // Small delay to ensure canvas element is mounted
 
     return () => {
-      canvas.off('mouse:down');
-      canvas.off('selection:created');
-      canvas.off('selection:updated');
-      canvas.dispose();
-      fabricCanvasRef.current = null;
+      clearTimeout(timeoutId);
+      if (fabricCanvasRef.current) {
+        // Clean up listeners
+        fabricCanvasRef.current.off('mouse:down');
+        fabricCanvasRef.current.off('selection:created');
+        fabricCanvasRef.current.off('selection:updated');
+      }
     };
   }, [isOpen, pdfDoc, pageIndex, renderPage, updateToolbarForSelection]);
   
@@ -235,9 +248,9 @@ export function AnnotationPage({
   useEffect(() => { applyStyleToSelection({ fontStyle: isItalic ? 'italic' : 'normal' }) }, [isItalic]);
   useEffect(() => { 
     if (isTextWrapping) {
-      applyStyleToSelection({ width: 200, splitByGrapheme: true, ...({ autoSized: false } as any) });
+      applyStyleToSelection({ width: 200, splitByGrapheme: true, ...( { autoSized: false } as any) });
     } else {
-      applyStyleToSelection({ width: undefined, splitByGrapheme: false, ...({ autoSized: true } as any) });
+      applyStyleToSelection({ width: undefined, splitByGrapheme: false, ...( { autoSized: true } as any) });
     }
   }, [isTextWrapping]);
   
@@ -320,6 +333,7 @@ export function AnnotationPage({
       console.error("Failed to save annotations", e);
     } finally {
       setIsLoading(false);
+      onClose();
     }
   };
 
@@ -381,3 +395,5 @@ export function AnnotationPage({
     </Dialog>
   );
 }
+
+    
