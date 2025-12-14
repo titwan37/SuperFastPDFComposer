@@ -131,9 +131,8 @@ export function AnnotationPage({
       fontWeight: isBold ? 'bold' : 'normal',
       fontStyle: isItalic ? 'italic' : 'normal',
       splitByGrapheme: isTextWrapping,
+      ...( {autoSized: !isTextWrapping} as any)
     });
-    // Add custom property
-    (textbox as any).autoSized = !isTextWrapping;
     
     textbox.on('editing:entered', () => {
       if (textbox.text === 'Type here...') {
