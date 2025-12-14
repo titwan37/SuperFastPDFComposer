@@ -39,7 +39,6 @@ import {
   PenSquare,
   FileEdit,
   Image as ImageIcon,
-  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,13 +118,13 @@ function DraggableSourcePage({
   docId,
   pageIndex,
   thumbnailUrl,
-  onPreview,
+  onClick,
   onDoubleClick,
 }: {
   docId: UniqueId;
   pageIndex: number;
   thumbnailUrl?: string | null;
-  onPreview: () => void;
+  onClick: () => void;
   onDoubleClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -139,7 +138,11 @@ function DraggableSourcePage({
   });
 
   return (
-    <div className="group relative" onDoubleClick={onDoubleClick}>
+    <div
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      className="group relative"
+    >
       <div
         ref={setNodeRef}
         {...listeners}
@@ -150,22 +153,6 @@ function DraggableSourcePage({
           pageNumber={pageIndex + 1}
           thumbnailUrl={thumbnailUrl}
         />
-      </div>
-      <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onPreview}
-              aria-label="Preview page"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left"><p>Preview page</p></TooltipContent>
-        </Tooltip>
       </div>
     </div>
   );
@@ -179,7 +166,6 @@ function SortableTargetPage({
   onDelete,
   onSign,
   onAnnotate,
-  onPreview,
 }: {
   id: UniqueId;
   pageNumber: number;
@@ -187,7 +173,6 @@ function SortableTargetPage({
   onDelete: (id: UniqueId) => void;
   onSign: () => void;
   onAnnotate: () => void;
-  onPreview: () => void;
 }) {
   const {
     attributes,
@@ -233,20 +218,6 @@ function SortableTargetPage({
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left"><p>Delete page</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={onPreview}
-                        aria-label="Preview page"
-                    >
-                        <Eye className="h-4 w-4" />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left"><p>Preview page</p></TooltipContent>
             </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -945,7 +916,7 @@ export function PdfComposer({
                                     docId={id} 
                                     pageIndex={i}
                                     thumbnailUrl={thumbnailUrls?.[i]}
-                                    onPreview={() => handlePreviewClick(id, i)}
+                                    onClick={() => handlePreviewClick(id, i)}
                                     onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
                                 />
                                 )
@@ -1048,7 +1019,6 @@ export function PdfComposer({
                             pageNumber={index + 1}
                             thumbnailUrl={sourceDocs[page.docId]?.thumbnailUrls?.[page.originalPageIndex]}
                             onDelete={deleteTargetPage}
-                            onPreview={() => handlePreviewClick(page.docId, page.originalPageIndex)}
                             onSign={() => openSignaturePad(page.id, page.docId, page.originalPageIndex)}
                             onAnnotate={() => openAnnotationPage(page.id, page.docId, page.originalPageIndex)}
                           />
