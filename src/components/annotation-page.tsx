@@ -121,6 +121,8 @@ export function AnnotationPage({
     if (isOpen && canvasRef.current) {
       const canvas = new fabric.Canvas(canvasRef.current);
       fabricCanvasRef.current = canvas;
+      
+      renderPage(canvas);
 
       const handleMouseDown = (options: fabric.IEvent<MouseEvent>) => {
         if (!options.target) {
@@ -146,14 +148,8 @@ export function AnnotationPage({
         fabricCanvasRef.current = null;
       };
     }
-  }, [isOpen, updateToolbarForSelection]);
+  }, [isOpen, updateToolbarForSelection, renderPage]);
 
-  // Effect to render the page once the canvas is initialized
-  useEffect(() => {
-    if (isOpen && fabricCanvasRef.current) {
-        renderPage(fabricCanvasRef.current);
-    }
-  }, [isOpen, renderPage]);
   
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
