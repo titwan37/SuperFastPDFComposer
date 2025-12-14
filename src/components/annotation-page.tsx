@@ -131,7 +131,7 @@ export function AnnotationPage({
       fontWeight: isBold ? 'bold' : 'normal',
       fontStyle: isItalic ? 'italic' : 'normal',
       splitByGrapheme: isTextWrapping,
-      ...(isTextWrapping ? {} : { width: undefined, autoSized: true } as any)
+      ...(!isTextWrapping && { width: undefined, autoSized: true } as any)
     });
     
     textbox.on('editing:entered', () => {
@@ -189,9 +189,9 @@ export function AnnotationPage({
         }
       };
 
-      canvas.on('mouse:down', handleMouseDown);
-      canvas.on('selection:created', handleSelection);
-      canvas.on('selection:updated', handleSelection);
+      canvas.on('mouse:down', handleMouseDown as (e: fabric.IEvent<Event>) => void);
+      canvas.on('selection:created', handleSelection as (e: fabric.IEvent<Event>) => void);
+      canvas.on('selection:updated', handleSelection as (e: fabric.IEvent<Event>) => void);
 
     }, 100); // Small delay to ensure canvas element is mounted
 
@@ -375,10 +375,15 @@ export function AnnotationPage({
                 <Loader className="h-8 w-8 animate-spin" />
               </div>
             )}
-             <canvas ref={canvasRef} style={{
+            <div
+              className="relative"
+              style={{
                 transform: `scale(${zoom})`,
                 transformOrigin: 'center center',
-             }} />
+              }}
+            >
+              <canvas ref={canvasRef} />
+            </div>
           </div>
         </div>
 
@@ -395,5 +400,3 @@ export function AnnotationPage({
     </Dialog>
   );
 }
-
-    
