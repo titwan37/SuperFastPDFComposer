@@ -42,7 +42,7 @@ export function AnnotationPage({
 }: AnnotationPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'text' | 'pen' | 'check' | 'cross'>("select");
-  const [zoom, setZoom] = useState(0.5);
+  const [zoom, setZoom] = useState(1);
 
   // Style for the currently active tool
   const [textColor, setTextColor] = useState("#000000");
@@ -170,7 +170,11 @@ export function AnnotationPage({
         return;
       }
       
-      const canvas = new fabric.Canvas(canvasRef.current);
+      const canvas = new fabric.Canvas(canvasRef.current, {
+        // This is important to ensure the canvas is responsive
+        // to clicks even when scaled.
+        enableRetinaScaling: false,
+      });
       fabricCanvasRef.current = canvas;
 
       renderPage(canvas);
@@ -189,9 +193,9 @@ export function AnnotationPage({
         }
       };
 
-      canvas.on('mouse:down', handleMouseDown);
-      canvas.on('selection:created', handleSelection);
-      canvas.on('selection:updated', handleSelection);
+      canvas.on('mouse:down', handleMouseDown as (e: fabric.IEvent<Event>) => void);
+      canvas.on('selection:created', handleSelection as (e: fabric.IEvent<Event>) => void);
+      canvas.on('selection:updated', handleSelection as (e: fabric.IEvent<Event>) => void);
 
     }, 100); // Small delay to ensure canvas element is mounted
 
@@ -369,7 +373,7 @@ export function AnnotationPage({
             setZoom={setZoom}
             onDelete={deleteSelected}
           />
-          <div className="flex-grow relative overflow-auto border rounded-md bg-muted/20 flex justify-center">
+          <div className="flex-grow relative overflow-auto border rounded-md bg-muted/20 flex justify-start">
             {isLoading && (
               <div className="absolute inset-0 z-10 flex h-full items-center justify-center bg-background/50">
                 <Loader className="h-8 w-8 animate-spin" />
@@ -379,7 +383,7 @@ export function AnnotationPage({
               className="relative"
               style={{
                 transform: `scale(${zoom})`,
-                transformOrigin: 'center center',
+                transformOrigin: 'top left',
               }}
             >
               <canvas ref={canvasRef} />
@@ -400,5 +404,3 @@ export function AnnotationPage({
     </Dialog>
   );
 }
-
-    
