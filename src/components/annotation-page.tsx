@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader } from "lucide-react";
 import { AnnotationToolbar } from "./annotation-toolbar";
-import type { TextAnnotation, DrawingAnnotation, IconAnnotation } from "@/lib/types";
 
 // pdf.js worker configuration
 if (typeof window !== "undefined") {
@@ -117,12 +116,11 @@ export function AnnotationPage({
     }
   }, [pdfDoc, pageIndex]);
 
+  // Effect to initialize the canvas and its listeners
   useEffect(() => {
     if (isOpen && canvasRef.current) {
       const canvas = new fabric.Canvas(canvasRef.current);
       fabricCanvasRef.current = canvas;
-      
-      renderPage(canvas);
 
       const handleMouseDown = (options: fabric.IEvent<MouseEvent>) => {
         if (!options.target) {
@@ -148,7 +146,14 @@ export function AnnotationPage({
         fabricCanvasRef.current = null;
       };
     }
-  }, [isOpen, renderPage, updateToolbarForSelection]);
+  }, [isOpen, updateToolbarForSelection]);
+
+  // Effect to render the page once the canvas is initialized
+  useEffect(() => {
+    if (isOpen && fabricCanvasRef.current) {
+        renderPage(fabricCanvasRef.current);
+    }
+  }, [isOpen, renderPage]);
   
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
