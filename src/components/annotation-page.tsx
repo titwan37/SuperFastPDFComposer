@@ -56,6 +56,11 @@ export function AnnotationPage({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const activeToolRef = useRef(activeTool);
+
+  useEffect(() => {
+    activeToolRef.current = activeTool;
+  }, [activeTool]);
 
   const RENDER_SCALE = 3; // Increase for better quality
 
@@ -163,8 +168,7 @@ export function AnnotationPage({
     renderPage(canvas);
 
     const handleMouseDown = (options: fabric.IEvent) => {
-      // Use the ref here to get the latest value
-      const tool = activeTool;
+      const tool = activeToolRef.current;
       if (!options.target && tool === 'text') {
         const pointer = canvas.getPointer(options.e);
         addTextAnnotation(pointer.x, pointer.y);
@@ -188,8 +192,7 @@ export function AnnotationPage({
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
-  }, [isOpen, pdfDoc, pageIndex, renderPage, updateToolbarForSelection, activeTool]); // Add activeTool here
-
+  }, [isOpen, pdfDoc, pageIndex, renderPage, updateToolbarForSelection]);
   
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
