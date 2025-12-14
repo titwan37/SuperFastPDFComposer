@@ -56,6 +56,11 @@ export function AnnotationPage({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const activeToolRef = useRef(activeTool);
+
+  useEffect(() => {
+    activeToolRef.current = activeTool;
+  }, [activeTool]);
 
   const RENDER_SCALE = 3; // Increase for better quality
 
@@ -70,35 +75,34 @@ export function AnnotationPage({
     }
   }, []);
 
-  const renderPage = useCallback(async () => {
+  const renderPage = useCallback(async (canvas: fabric.Canvas) => {
     setIsLoading(true);
-    const tempDoc = await pdfDoc.copy();
-    const pdfBytes = await tempDoc.save();
-    const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
-    const page = await pdfjsDoc.getPage(pageIndex + 1);
-    const viewport = page.getViewport({ scale: RENDER_SCALE });
+    try {
+        const tempDoc = await pdfDoc.copy();
+        const pdfBytes = await tempDoc.save();
+        const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
+        const page = await pdfjsDoc.getPage(pageIndex + 1);
+        const viewport = page.getViewport({ scale: RENDER_SCALE });
 
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.height = viewport.height;
-    tempCanvas.width = viewport.width;
-    const context = tempCanvas.getContext("2d");
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.height = viewport.height;
+        tempCanvas.width = viewport.width;
+        const context = tempCanvas.getContext("2d");
 
-    if (!context) {
-      setIsLoading(false);
-      return;
-    }
+        if (!context) {
+          setIsLoading(false);
+          return;
+        }
 
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport,
-    };
-    await page.render(renderContext).promise;
-    
-    const imageUrl = tempCanvas.toDataURL();
-    
-    if (fabricCanvasRef.current) {
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+        await page.render(renderContext).promise;
+        
+        const imageUrl = tempCanvas.toDataURL();
+        
         fabric.Image.fromURL(imageUrl, (img) => {
-            const canvas = fabricCanvasRef.current!;
             canvas.setDimensions({ width: viewport.width, height: viewport.height });
             canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
                 scaleX: canvas.width! / img.width!,
@@ -106,8 +110,9 @@ export function AnnotationPage({
             });
             setIsLoading(false);
         });
-    } else {
-        setIsLoading(false);
+    } catch (e) {
+      console.error("Failed to render page", e);
+      setIsLoading(false);
     }
   }, [pdfDoc, pageIndex]);
 
@@ -116,14 +121,18 @@ export function AnnotationPage({
       const canvas = new fabric.Canvas(canvasRef.current);
       fabricCanvasRef.current = canvas;
       
-      renderPage();
+      renderPage(canvas);
 
-      canvas.on('object:modified', (e) => {
-        const target = e.target;
-        if (target instanceof fabric.Textbox) {
-          target.set('autoSized', false);
+      const handleMouseDown = (options: fabric.IEvent<MouseEvent>) => {
+        if (!options.target) {
+            const tool = activeToolRef.current;
+            if (tool === 'text') {
+                addTextAnnotation(options.pointer!.x, options.pointer!.y);
+            }
         }
-      });
+      };
+
+      canvas.on('mouse:down', handleMouseDown);
       
       canvas.on('selection:created', (e) => {
         if (e.target) updateToolbarForSelection(e.target);
@@ -131,32 +140,18 @@ export function AnnotationPage({
       canvas.on('selection:updated', (e) => {
         if (e.target) updateToolbarForSelection(e.target);
       });
-      canvas.on('selection:cleared', () => {
-        // Optionally reset toolbar to defaults
-      });
 
       return () => {
+        canvas.off('mouse:down', handleMouseDown);
         canvas.dispose();
         fabricCanvasRef.current = null;
       };
     }
   }, [isOpen, renderPage, updateToolbarForSelection]);
   
-  const handleCanvasClick = (options: fabric.IEvent<MouseEvent>) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas || activeTool !== 'text') return;
-    
-    if (!options.target) {
-      addTextAnnotation(options.pointer!.x, options.pointer!.y);
-    }
-  };
-
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
-
-    canvas.off('mouse:down');
-    canvas.on('mouse:down', handleCanvasClick);
     
     if (activeTool === 'select') {
       canvas.selection = true;
