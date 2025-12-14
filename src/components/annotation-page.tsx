@@ -42,7 +42,7 @@ export function AnnotationPage({
 }: AnnotationPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'text' | 'pen' | 'check' | 'cross'>("select");
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.5);
 
   // Style for the currently active tool
   const [textColor, setTextColor] = useState("#000000");

@@ -1,4 +1,6 @@
+
 import type { PDFDocument } from 'pdf-lib';
+import type { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 
 // Represents a single page in the target composition area
 export type TargetPage = {
@@ -10,7 +12,8 @@ export type TargetPage = {
 // Represents a loaded source PDF document
 export type SourceDoc = {
   id: string; // Unique ID for the document
-  doc: PDFDocument;
+  doc: PDFDocument; // pdf-lib document for manipulation
+  pdfjsDoc: PDFDocumentProxy; // pdf.js document for rendering
   filename: string;
   thumbnailUrls: (string | undefined | null)[]; // Array of data URLs for page thumbnails
 };

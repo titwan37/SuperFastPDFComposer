@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { PDFDocument, rgb, PageSizes, type PDFImage} from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import {
   Upload,
   Download,
@@ -54,6 +55,7 @@ import {
 } from "@/components/ui/tooltip";
 import { SignatureDialog } from "./signature-dialog";
 import { AnnotationPage } from "./annotation-page";
+import { PagePreviewDialog } from "./page-preview-dialog";
 
 
 // pdf.js worker configuration
@@ -116,11 +118,13 @@ function DraggableSourcePage({
   docId,
   pageIndex,
   thumbnailUrl,
+  onClick,
   onDoubleClick,
 }: {
   docId: UniqueId;
   pageIndex: number;
   thumbnailUrl?: string | null;
+  onClick: () => void;
   onDoubleClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -134,7 +138,7 @@ function DraggableSourcePage({
   });
 
   return (
-    <div className="group relative cursor-grab touch-none" onDoubleClick={onDoubleClick}>
+    <div className="group relative cursor-grab touch-none" onClick={onClick} onDoubleClick={onDoubleClick}>
       <div ref={setNodeRef} {...listeners} {...attributes}>
         <PageThumbnail
           pageNumber={pageIndex + 1}
@@ -264,6 +268,8 @@ export function PdfComposer({
   const [isAnnotationPageOpen, setIsAnnotationPageOpen] = useState(false);
   const [annotatingPageInfo, setAnnotatingPageInfo] = useState<{ targetPageId: UniqueId; docId: UniqueId; pageIndex: number } | null>(null);
 
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewInfo, setPreviewInfo] = useState<{ docId: string; pageNumber: number } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -342,6 +348,7 @@ export function PdfComposer({
       const newSourceDoc: SourceDoc = {
         id: docId,
         doc: pdfDoc,
+        pdfjsDoc,
         filename: file.name,
         thumbnailUrls: Array(pageCount).fill(undefined),
       };
@@ -435,6 +442,9 @@ export function PdfComposer({
                 width: scaled.width,
                 height: scaled.height,
             });
+            
+            const pdfBytes = await pdfDoc.save();
+            const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
 
             // Create a thumbnail from the image itself for the UI
             const thumbnailUrl = URL.createObjectURL(file);
@@ -442,6 +452,7 @@ export function PdfComposer({
             const newSourceDoc: SourceDoc = {
                 id: docId,
                 doc: pdfDoc,
+                pdfjsDoc: pdfjsDoc,
                 filename: file.name,
                 thumbnailUrls: [thumbnailUrl],
             };
@@ -634,6 +645,13 @@ export function PdfComposer({
     return { pageNumber: '', thumbnailUrl: undefined };
 }, [activeId, sourceDocs, targetPages]);
 
+  const handleSourcePageClick = (docId: UniqueId, pageIndex: number) => {
+    const sourceDoc = sourceDocs[docId];
+    if (!sourceDoc) return;
+    setPreviewInfo({ docId, pageNumber: pageIndex + 1 });
+    setIsPreviewOpen(true);
+  };
+
   const handleSourcePageDoubleClick = (docId: UniqueId, pageIndex: number) => {
     const sourceDoc = sourceDocs[docId];
     if (!sourceDoc) return;
@@ -819,7 +837,7 @@ export function PdfComposer({
                     </Tooltip>
                 </div>
                 <p className="flex-grow text-right text-xs text-muted-foreground">
-                    Double-click or drag pages to compose.
+                    Click to preview, double-click to add.
                 </p>
               </div>
               <input
@@ -842,7 +860,7 @@ export function PdfComposer({
               <ScrollArea className="h-[52vh] rounded-md border p-4">
                 <div className="space-y-4">
                   {Object.keys(sourceDocs).length > 0 ? (
-                    Object.values(sourceDocs).map(({ id, doc, filename, thumbnailUrls }) => (
+                    Object.values(sourceDocs).map(({ id, doc, pdfjsDoc, filename, thumbnailUrls }) => (
                       <div key={id} className="group/source-doc relative space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center opacity-0 transition-opacity group-hover/source-doc:opacity-100">
@@ -889,6 +907,7 @@ export function PdfComposer({
                                     docId={id} 
                                     pageIndex={i}
                                     thumbnailUrl={thumbnailUrls?.[i]}
+                                    onClick={() => handleSourcePageClick(id, i)}
                                     onDoubleClick={() => handleSourcePageDoubleClick(id, i)}
                                 />
                                 )
@@ -1041,6 +1060,14 @@ export function PdfComposer({
             onSave={(annotatedDoc) =>
               handleSaveAnnotations(annotatedDoc)
             }
+        />
+      )}
+      {previewInfo && (
+        <PagePreviewDialog
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          pdfDoc={sourceDocs[previewInfo.docId]?.pdfjsDoc ?? null}
+          pageNumber={previewInfo.pageNumber}
         />
       )}
     </TooltipProvider>
