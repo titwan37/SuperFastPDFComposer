@@ -131,7 +131,7 @@ export function AnnotationPage({
       fontWeight: isBold ? 'bold' : 'normal',
       fontStyle: isItalic ? 'italic' : 'normal',
       splitByGrapheme: isTextWrapping,
-      ...( {autoSized: !isTextWrapping} as any)
+      ...({ autoSized: !isTextWrapping } as any)
     });
     
     textbox.on('editing:entered', () => {
@@ -235,9 +235,9 @@ export function AnnotationPage({
   useEffect(() => { applyStyleToSelection({ fontStyle: isItalic ? 'italic' : 'normal' }) }, [isItalic]);
   useEffect(() => { 
     if (isTextWrapping) {
-      applyStyleToSelection({ width: 200, splitByGrapheme: true, ...( {autoSized: false} as any) });
+      applyStyleToSelection({ width: 200, splitByGrapheme: true, ...({ autoSized: false } as any) });
     } else {
-      applyStyleToSelection({ width: undefined, splitByGrapheme: false, ...( {autoSized: true} as any) });
+      applyStyleToSelection({ width: undefined, splitByGrapheme: false, ...({ autoSized: true } as any) });
     }
   }, [isTextWrapping]);
   

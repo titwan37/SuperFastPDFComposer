@@ -238,25 +238,8 @@ function SortableTargetPage({
                 variant="outline"
                 size="icon"
                 className="h-7 w-7"
-                onClick={onPreview}
-                aria-label="Preview page"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>Preview Page</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
                 onClick={onSign}
-                aria-label="Sign page"
-              >
+                aria-label="Sign page">
                 <PenSquare className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -266,13 +249,25 @@ function SortableTargetPage({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="outline"
+              <Button variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={onPreview}
+                aria-label="Preview page">
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Preview Page</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline"
                 size="icon"
                 className="h-7 w-7"
                 onClick={onAnnotate}
-                aria-label="Annotate page"
-              >
+                aria-label="Annotate page">
                 <FileEdit className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -1070,15 +1065,9 @@ export function PdfComposer({
                 <div className="flex shrink-0 items-center gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() =>
-                          setTargetThumbnailScale((s) => Math.max(0.5, s - 0.1))
-                        }
-                        disabled={targetThumbnailScale <= 0.5}
-                      >
+                      <Button variant="outline" size="icon" className="h-7 w-7"
+                        onClick={() => setTargetThumbnailScale((s) => Math.max(0.5, s - 0.1))
+                        } disabled={targetThumbnailScale <= 0.5}>
                         <ZoomOut className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -1116,10 +1105,7 @@ export function PdfComposer({
                 <div className="flex shrink-0 gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => targetFileInputRef.current?.click()}
-                      >
+                      <Button variant="outline" onClick={() => targetFileInputRef.current?.click()}>
                         <Upload className="mr-2 h-4 w-4" />
                         Load
                       </Button>
@@ -1148,11 +1134,8 @@ export function PdfComposer({
                   </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => setTargetPages([])}
-                        disabled={targetPages.length === 0}
-                      >
+                      <Button variant="outline" onClick={() => setTargetPages([])}
+                        disabled={targetPages.length === 0}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Clear
                       </Button>
@@ -1165,19 +1148,12 @@ export function PdfComposer({
               </div>
             </CardHeader>
             <CardContent className="flex-grow shrink-0 p-4">
-              <SortableContext
-                items={targetPages.map((p) => p.id)}
-                strategy={rectSortingStrategy}
-              >
+              <SortableContext items={targetPages.map((p) => p.id)} strategy={rectSortingStrategy}>
                 <ScrollArea className="h-[52vh] rounded-md border">
                   <div ref={setDroppableNodeRef} className="h-full p-4">
                     {targetPages.length > 0 ? (
-                      <div
-                        className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5"
-                        style={{
-                          gridTemplateColumns: `repeat(auto-fill, minmax(calc(6rem * ${targetThumbnailScale}), 1fr))`,
-                        }}
-                      >
+                      <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5"
+                        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(calc(6rem * ${targetThumbnailScale}), 1fr))`,}}>
                         {targetPages.map((page, index) => (
                           <SortableTargetPage
                             key={page.id}
@@ -1196,15 +1172,14 @@ export function PdfComposer({
                                 page.originalPageIndex
                               )
                             }
+                            onPreview={() =>
+                              handlePreviewClick(
+                                page.docId,
+                                page.originalPageIndex)
+                            }
                             onAnnotate={() =>
                               openAnnotationPage(
                                 page.id,
-                                page.docId,
-                                page.originalPageIndex
-                              )
-                            }
-                            onPreview={() =>
-                              handlePreviewClick(
                                 page.docId,
                                 page.originalPageIndex
                               )
@@ -1213,12 +1188,8 @@ export function PdfComposer({
                         ))}
                       </div>
                     ) : (
-                      <div
-                        className={cn(
-                          "flex h-full min-h-[10rem] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
-                          isOver ? "border-primary bg-accent/10" : ""
-                        )}
-                      >
+                      <div className={cn("flex h-full min-h-[10rem] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors",
+                          isOver ? "border-primary bg-accent/10" : "")}>
                         <p className="font-semibold">Drag pages here</p>
                         <p className="text-sm">or load a base PDF to start.</p>
                       </div>
