@@ -23,6 +23,7 @@ interface DraggableAnnotationProps {
 
 export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete, onTextChange, onResizeStop }: DraggableAnnotationProps) {
     const [isEditing, setIsEditing] = useState(annotation.isEditing || false);
+    
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: annotation.id,
         disabled: isEditing,
@@ -37,7 +38,6 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         transform: CSS.Translate.toString(transform),
         color: annotation.fontColor,
         fontSize: `${annotation.fontSize}px`,
-        // width and height are now controlled by the ResizableBox
     };
     
     const stopPropagation = (e: React.MouseEvent | React.FocusEvent | React.ChangeEvent) => {
@@ -64,6 +64,10 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
 
     const handleBlur = () => {
         setIsEditing(false);
+        if (annotation.text.trim() === "") {
+            onTextChange("Type here...");
+            setIsPlaceholder(true);
+        }
     }
 
     return (
@@ -71,8 +75,7 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
             ref={setNodeRef}
             style={style}
             {...attributes}
-            // We only apply drag listeners when not selected, to allow text selection
-            {...(isSelected ? {} : listeners)}
+            {...listeners}
             onClick={(e) => {
                 stopPropagation(e);
                 onSelect();
@@ -83,8 +86,7 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
             }}
             className={cn(
                 "group z-10", 
-                isSelected ? "border-primary" : "border-transparent",
-                !isEditing && "cursor-move" // Only show move cursor when not editing
+                !isEditing && "cursor-move"
             )}
         >
              <ResizableBox
@@ -95,22 +97,26 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
                     onResizeStop({ width: data.size.width, height: data.size.height });
                 }}
                 className={cn("box-border p-1", isSelected ? "border border-dashed border-primary" : "border border-transparent hover:border-primary/50")}
-                handle={
+                handle={(props, ref) => (
                     isSelected ? 
-                    <span className="react-resizable-handle absolute bottom-0 right-0 h-4 w-4 cursor-se-resize bg-primary rounded-full border-2 border-background" />
+                    <span 
+                        ref={ref}
+                        className="react-resizable-handle absolute bottom-0 right-0 h-4 w-4 cursor-se-resize bg-primary rounded-full border-2 border-background" 
+                        onClick={stopPropagation}
+                        {...props}
+                    />
                     : <></>
-                }
+                )}
              >
                 <textarea
                     value={annotation.text}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
+                    onKeyDown={(e) => e.stopPropagation()} // Stop key events from bubbling up to dnd-kit
                     style={{ all: 'unset', width: '100%', height: '100%', cursor: isEditing ? 'text' : 'move' }}
                     className="bg-transparent"
                     autoFocus={isEditing}
-                    // Apply drag listeners to the textarea only when not editing
-                    {...(!isEditing ? listeners : {})}
                 />
             </ResizableBox>
             {isSelected && !isEditing && (
