@@ -85,8 +85,7 @@ export function AnnotationPage({
         const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
         const page = await pdfjsDoc.getPage(pageIndex + 1);
         
-        // Define a container width and calculate scale based on it to maintain aspect ratio
-        const containerWidth = 800; // You can adjust this
+        const containerWidth = 800; 
         const viewport = page.getViewport({ scale: 1 });
         const scale = containerWidth / viewport.width;
         const scaledViewport = page.getViewport({ scale: scale * RENDER_SCALE });
@@ -133,12 +132,11 @@ export function AnnotationPage({
   // Effect to handle keyboard events for deleting annotations
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if an input or textarea is focused
       const activeElement = document.activeElement;
       const isEditingText = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
 
       if ((e.key === 'Backspace' || e.key === 'Delete') && selectedAnnotationId && !isEditingText) {
-        e.preventDefault(); // Prevent browser back navigation on Backspace
+        e.preventDefault(); 
         handleDeleteAnnotation(selectedAnnotationId);
       }
     };
@@ -146,12 +144,11 @@ export function AnnotationPage({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedAnnotationId]);
+  }, [selectedAnnotationId, annotations]);
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
 
-    // Deselect if clicking on the container itself, not an annotation
     if (target.id === 'annotation-container' && selectedAnnotationId) {
         setSelectedAnnotationId(null);
     }
@@ -179,8 +176,8 @@ export function AnnotationPage({
         fontSize,
         fontColor: textColor,
         width: 150,
-        height: 25,
-        isEditing: true, // Start in editing mode
+        height: 35,
+        isEditing: true,
     };
     setAnnotations(prev => [...prev, newAnnotation]);
     setSelectedAnnotationId(newAnnotation.id);
@@ -193,13 +190,13 @@ export function AnnotationPage({
         iconType,
         x,
         y,
-        size: 50, // Default size
+        size: 50,
         strokeColor,
         strokeWidth,
     };
     setAnnotations(prev => [...prev, newAnnotation]);
     setSelectedAnnotationId(newAnnotation.id);
-    setActiveTool('select'); // Switch to select tool
+    setActiveTool('select');
   };
   
   const handleDragEnd = (event: DragEndEvent) => {
@@ -231,6 +228,13 @@ export function AnnotationPage({
     );
   };
 
+  const handleUpdateAnnotationSize = (id: string, newSize: { width: number, height: number}) => {
+    setAnnotations(prev =>
+      prev.map(ann => (ann.id === id && ann.type === 'text' ? { ...ann, ...newSize } : ann))
+    );
+  };
+
+
   const handleSave = async () => {
     setIsLoading(true);
     try {
@@ -249,7 +253,7 @@ export function AnnotationPage({
             if (!color) continue;
             page.drawText(annotation.text, {
                 x: annotation.x * scaleX,
-                y: pageHeight - (annotation.y * scaleY) - (annotation.fontSize * scaleY), // Adjust y-position
+                y: pageHeight - (annotation.y * scaleY) - (annotation.fontSize * scaleY),
                 font: helveticaFont,
                 size: annotation.fontSize * scaleY,
                 color: rgb(color.r / 255, color.g / 255, color.b / 255),
@@ -371,6 +375,7 @@ export function AnnotationPage({
                                     onSelect={() => setSelectedAnnotationId(annotation.id)}
                                     onDelete={() => handleDeleteAnnotation(annotation.id)}
                                     onTextChange={(newText) => handleUpdateTextAnnotation(annotation.id, newText)}
+                                    onResizeStop={(size) => handleUpdateAnnotationSize(annotation.id, size)}
                                 />;
                     }
                     if (annotation.type === 'icon') {
@@ -402,7 +407,3 @@ export function AnnotationPage({
     </Dialog>
   );
 }
-
-    
-
-    
