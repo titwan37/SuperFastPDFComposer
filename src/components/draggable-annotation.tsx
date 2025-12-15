@@ -20,6 +20,7 @@ interface DraggableAnnotationProps {
 export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete, onTextChange }: DraggableAnnotationProps) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: annotation.id,
+        disabled: isSelected, // Disable dragging when selected for editing
     });
     
     const [isPlaceholder, setIsPlaceholder] = useState(annotation.text === "Type here...");
@@ -36,11 +37,12 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         padding: '2px',
     };
     
-    const stopPropagation = (e: React.MouseEvent) => {
+    const stopPropagation = (e: React.MouseEvent | React.FocusEvent | React.ChangeEvent) => {
         e.stopPropagation();
     }
 
-    const handleFocus = () => {
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        stopPropagation(e);
         onSelect();
         if (isPlaceholder) {
             onTextChange('');
@@ -49,6 +51,7 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
     };
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        stopPropagation(e);
         if (isPlaceholder) {
             setIsPlaceholder(false);
         }
@@ -94,5 +97,3 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         </div>
     );
 }
-
-    
