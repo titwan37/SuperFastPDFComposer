@@ -91,7 +91,7 @@ export function AnnotationPage({
         const scale = containerWidth / viewport.width;
         const scaledViewport = page.getViewport({ scale: scale * RENDER_SCALE });
         
-        setPageDimensions({ width: scaledViewport.width, height: scaledViewport.height });
+        setPageDimensions({ width: scaledViewport.width / RENDER_SCALE, height: scaledViewport.height / RENDER_SCALE });
 
         const tempCanvas = document.createElement("canvas");
         tempCanvas.height = scaledViewport.height;
@@ -130,16 +130,21 @@ export function AnnotationPage({
     renderPage();
   }, [isOpen, pdfDoc, pageIndex, renderPage]);
 
-  // Effect to handle keyboard events
+  // Effect to handle keyboard events for deleting annotations
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-        if ((e.key === 'Backspace' || e.key === 'Delete') && selectedAnnotationId) {
-            handleDeleteAnnotation(selectedAnnotationId);
-        }
+      // Check if an input or textarea is focused
+      const activeElement = document.activeElement;
+      const isEditingText = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+
+      if ((e.key === 'Backspace' || e.key === 'Delete') && selectedAnnotationId && !isEditingText) {
+        e.preventDefault(); // Prevent browser back navigation on Backspace
+        handleDeleteAnnotation(selectedAnnotationId);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-        window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedAnnotationId]);
 
@@ -335,8 +340,8 @@ export function AnnotationPage({
               <div
                 className="relative"
                 style={{
-                  width: pageDimensions.width / RENDER_SCALE,
-                  height: pageDimensions.height / RENDER_SCALE,
+                  width: pageDimensions.width,
+                  height: pageDimensions.height,
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top left',
                 }}
@@ -397,5 +402,7 @@ export function AnnotationPage({
     </Dialog>
   );
 }
+
+    
 
     
