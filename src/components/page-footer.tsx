@@ -8,7 +8,6 @@ export function PageFooter({
   return (
     <footer
       className="w-full p-4 text-center text-sm text-muted-foreground"
-      suppressHydrationWarning
     >
       <p>
         Created on Firebase Studio.{" | "}

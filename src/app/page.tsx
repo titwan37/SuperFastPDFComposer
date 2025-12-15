@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PdfComposer } from "@/components/pdf-composer";
 import { Toaster } from "@/components/ui/toaster";
 import { TipsDialog } from "@/components/tips-dialog";
@@ -8,6 +8,26 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronsDown } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PageFooter } from "@/components/page-footer";
+import { Loader } from "lucide-react";
+
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 
 export default function Home() {
   const [isTipsDialogOpen, setIsTipsDialogOpen] = useState(false);
@@ -34,11 +54,10 @@ export default function Home() {
   }
 
   return (
-    <>
+    <ClientOnly>
       <main className="flex min-h-screen flex-col 
       items-center bg-background p-4 pt-12 
-      font-body text-foreground md:p-8 md:pt-16"
-        suppressHydrationWarning >
+      font-body text-foreground md:p-8 md:pt-16">
         <div className="w-full max-w-screen-2xl">
           <PageHeader />
           <PdfComposer openTipsDialog={openTipsDialog} setDownloadAction={setDownloadAction} />
@@ -56,6 +75,6 @@ export default function Home() {
         onClose={handleClose}
         onConfirm={handleConfirm}
       />
-    </>
+    </ClientOnly>
   );
 }
