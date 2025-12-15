@@ -84,13 +84,18 @@ export function AnnotationPage({
         const pdfBytes = await tempDoc.save();
         const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
         const page = await pdfjsDoc.getPage(pageIndex + 1);
-        const viewport = page.getViewport({ scale: RENDER_SCALE });
         
-        setPageDimensions({ width: viewport.width, height: viewport.height });
+        // Define a container width and calculate scale based on it to maintain aspect ratio
+        const containerWidth = 800; // You can adjust this
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = containerWidth / viewport.width;
+        const scaledViewport = page.getViewport({ scale: scale * RENDER_SCALE });
+        
+        setPageDimensions({ width: scaledViewport.width, height: scaledViewport.height });
 
         const tempCanvas = document.createElement("canvas");
-        tempCanvas.height = viewport.height;
-        tempCanvas.width = viewport.width;
+        tempCanvas.height = scaledViewport.height;
+        tempCanvas.width = scaledViewport.width;
         const context = tempCanvas.getContext("2d");
 
         if (!context) {
@@ -101,7 +106,7 @@ export function AnnotationPage({
 
         const renderContext = {
           canvasContext: context,
-          viewport: viewport,
+          viewport: scaledViewport,
         };
         await page.render(renderContext).promise;
         
@@ -328,21 +333,29 @@ export function AnnotationPage({
             )}
             <DndContext onDragEnd={handleDragEnd}>
               <div
-                id="annotation-container"
                 className="relative"
                 style={{
+                  width: pageDimensions.width / RENDER_SCALE,
+                  height: pageDimensions.height / RENDER_SCALE,
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top left',
-                  width: pageDimensions.width,
-                  height: pageDimensions.height,
                 }}
-                onClick={handleContainerClick}
               >
-                {pageImageUrl ? (
-                    <img src={pageImageUrl} alt={`Page ${pageIndex + 1}`} style={{ width: '100%', height: '100%'}} />
-                ) : !isLoading && (
-                    <div className="w-full h-full flex items-center justify-center text-destructive-foreground">Failed to load page preview.</div>
-                )}
+                  <div
+                    id="annotation-container"
+                    className="absolute inset-0"
+                    style={{
+                      width: pageDimensions.width,
+                      height: pageDimensions.height,
+                    }}
+                    onClick={handleContainerClick}
+                  >
+                    {pageImageUrl ? (
+                        <img src={pageImageUrl} alt={`Page ${pageIndex + 1}`} style={{ width: '100%', height: 'auto'}} />
+                    ) : !isLoading && (
+                        <div className="w-full h-full flex items-center justify-center text-destructive-foreground">Failed to load page preview.</div>
+                    )}
+                  </div>
                 
                 {annotations.map(annotation => {
                     if (annotation.type === 'text') {
