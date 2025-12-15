@@ -1,13 +1,11 @@
 
 "use client";
 
-import { MousePointer2, Type, Pen, ZoomIn, ZoomOut, Check, X, Trash2, Bold, Italic, WrapText } from 'lucide-react';
+import { MousePointer2, Type, Pen, ZoomIn, ZoomOut, Check, X, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
-import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Toggle } from './ui/toggle';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -20,14 +18,6 @@ interface AnnotationToolbarProps {
     setTextColor: (color: string) => void;
     fontSize: number;
     setFontSize: (size: number) => void;
-    fontFamily: string;
-    setFontFamily: (font: string) => void;
-    isBold: boolean;
-    setIsBold: (bold: boolean) => void;
-    isItalic: boolean;
-    setIsItalic: (italic: boolean) => void;
-    isTextWrapping: boolean;
-    setIsTextWrapping: (wrapping: boolean) => void;
 
     // Stroke props
     strokeColor: string;
@@ -48,18 +38,10 @@ export function AnnotationToolbar({
     setTextColor,
     fontSize,
     setFontSize,
-    fontFamily,
-    setFontFamily,
-    isBold,
-    setIsBold,
-    isItalic,
-    setIsItalic,
     strokeColor,
     setStrokeColor,
     strokeWidth,
     setStrokeWidth,
-    isTextWrapping,
-    setIsTextWrapping,
     zoom,
     setZoom,
     onDelete,
@@ -112,7 +94,7 @@ export function AnnotationToolbar({
             <Pen className="h-5 w-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent><p>Pen Tool (P)</p></TooltipContent>
+        <TooltipContent><p>Pen Tool (P) - Disabled</p></TooltipContent>
       </Tooltip>
        <Tooltip>
         <TooltipTrigger asChild>
@@ -194,52 +176,6 @@ export function AnnotationToolbar({
             ))}
           </SelectContent>
         </Select>
-
-         <Select
-          value={fontFamily}
-          onValueChange={setFontFamily}
-          disabled={!isTextToolActive && !isSelectToolActive}
-        >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SelectTrigger className="h-8 w-28">
-                <SelectValue />
-              </SelectTrigger>
-            </TooltipTrigger>
-            <TooltipContent><p>Font Family</p></TooltipContent>
-          </Tooltip>
-          <SelectContent>
-            {['Arial', 'Helvetica', 'Times New Roman', 'Courier New'].map(font => (
-              <SelectItem key={font} value={font} style={{fontFamily: font}}>{font}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Toggle pressed={isBold} onPressedChange={setIsBold} size="sm" disabled={!isTextToolActive && !isSelectToolActive} aria-label="Bold">
-                    <Bold className="h-4 w-4" />
-                </Toggle>
-            </TooltipTrigger>
-            <TooltipContent><p>Bold (Ctrl+B)</p></TooltipContent>
-        </Tooltip>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Toggle pressed={isItalic} onPressedChange={setIsItalic} size="sm" disabled={!isTextToolActive && !isSelectToolActive} aria-label="Italic">
-                    <Italic className="h-4 w-4" />
-                </Toggle>
-            </TooltipTrigger>
-            <TooltipContent><p>Italic (Ctrl+I)</p></TooltipContent>
-        </Tooltip>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Toggle pressed={isTextWrapping} onPressedChange={setIsTextWrapping} size="sm" disabled={!isTextToolActive && !isSelectToolActive} aria-label="Text wrap">
-                    <WrapText className="h-4 w-4" />
-                </Toggle>
-            </TooltipTrigger>
-            <TooltipContent><p>Toggle Text Wrapping</p></TooltipContent>
-        </Tooltip>
-
       </div>
 
       <Separator orientation="vertical" className="h-8" />
@@ -307,3 +243,5 @@ export function AnnotationToolbar({
     </TooltipProvider>
   );
 }
+
+    

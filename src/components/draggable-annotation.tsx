@@ -75,6 +75,7 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
                 onFocus={handleFocus}
                 style={{ all: 'unset', width: '100%', height: '100%', cursor: 'text' }}
                 className="bg-transparent"
+                autoFocus={annotation.isEditing}
             />
             {isSelected && (
                  <Button
@@ -93,3 +94,5 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         </div>
     );
 }
+
+    

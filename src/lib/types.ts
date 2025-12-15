@@ -53,3 +53,5 @@ export type IconAnnotation = {
   strokeColor: string;
   strokeWidth: number;
 };
+
+    

@@ -4,7 +4,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import { fabric } from 'fabric';
 import type { Dispatch, SetStateAction } from 'react';
 import {
   Dialog,
@@ -16,6 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader } from "lucide-react";
 import { AnnotationToolbar } from "./annotation-toolbar";
+import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import { DraggableAnnotation } from "./draggable-annotation";
+import { DraggableIconAnnotation } from "./draggable-icon-annotation";
+import type { Annotation, TextAnnotation, IconAnnotation } from '@/lib/types';
+import { toast } from "@/hooks/use-toast";
 
 // pdf.js worker configuration
 if (typeof window !== "undefined") {
@@ -25,6 +29,9 @@ if (typeof window !== "undefined") {
   ).toString();
 }
 
+let uniqueIdCounter = 0;
+const getUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${uniqueIdCounter++}`;
+
 interface AnnotationPageProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,6 +39,17 @@ interface AnnotationPageProps {
   pageIndex: number;
   onSave: (annotatedDoc: PDFDocument) => void;
 }
+
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
+};
 
 export function AnnotationPage({
   isOpen,
@@ -47,24 +65,19 @@ export function AnnotationPage({
   // Style for the currently active tool
   const [textColor, setTextColor] = useState("#000000");
   const [fontSize, setFontSize] = useState(16);
-  const [fontFamily, setFontFamily] = useState('Arial');
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
   const [strokeColor, setStrokeColor] = useState("#008000");
   const [strokeWidth, setStrokeWidth] = useState(3);
-  const [isTextWrapping, setIsTextWrapping] = useState(true);
+  
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
-  const activeToolRef = useRef(activeTool);
-
-  useEffect(() => {
-    activeToolRef.current = activeTool;
-  }, [activeTool]);
+  const [pageImageUrl, setPageImageUrl] = useState<string | null>(null);
+  const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
 
   const RENDER_SCALE = 3; // Increase for better quality
 
-  const renderPage = useCallback(async (canvas: fabric.Canvas) => {
+  const renderPage = useCallback(async () => {
+    if (!isOpen) return;
     setIsLoading(true);
     try {
         const tempDoc = await pdfDoc.copy();
@@ -72,6 +85,8 @@ export function AnnotationPage({
         const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
         const page = await pdfjsDoc.getPage(pageIndex + 1);
         const viewport = page.getViewport({ scale: RENDER_SCALE });
+        
+        setPageDimensions({ width: viewport.width, height: viewport.height });
 
         const tempCanvas = document.createElement("canvas");
         tempCanvas.height = viewport.height;
@@ -91,184 +106,120 @@ export function AnnotationPage({
         await page.render(renderContext).promise;
         
         const imageUrl = tempCanvas.toDataURL();
-        
-        fabric.Image.fromURL(imageUrl, (img) => {
-            canvas.setDimensions({ width: viewport.width, height: viewport.height });
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width! / img.width!,
-                scaleY: canvas.height! / img.height!,
-            });
-            setIsLoading(false);
-        }, { crossOrigin: 'anonymous' });
+        setPageImageUrl(imageUrl);
+
     } catch (e) {
       console.error("Failed to render page", e);
+      toast({
+        variant: "destructive",
+        title: "Error Rendering Page",
+        description: "Could not display the PDF page for annotation.",
+      });
+    } finally {
       setIsLoading(false);
     }
-  }, [pdfDoc, pageIndex]);
+  }, [pdfDoc, pageIndex, isOpen]);
 
-  const updateToolbarForSelection = useCallback((obj: fabric.Object) => {
-    if (obj.type === 'textbox') {
-      const textbox = obj as fabric.Textbox;
-      setTextColor(textbox.fill as string || '#000000');
-      setFontSize(textbox.fontSize || 16);
-      setFontFamily(textbox.fontFamily || 'Arial');
-      setIsBold(textbox.fontWeight === 'bold');
-      setIsItalic(textbox.fontStyle === 'italic');
-    }
-  }, []);
-
-  const addTextAnnotation = (x: number, y: number) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-
-    const textbox = new fabric.Textbox("Type here...", {
-      left: x,
-      top: y,
-      width: 200,
-      fontSize,
-      fontFamily,
-      fill: textColor,
-      fontWeight: isBold ? 'bold' : 'normal',
-      fontStyle: isItalic ? 'italic' : 'normal',
-      splitByGrapheme: isTextWrapping,
-      ...(!isTextWrapping && { width: undefined, autoSized: true } as any)
-    });
-    
-    textbox.on('editing:entered', () => {
-      if (textbox.text === 'Type here...') {
-        textbox.text = '';
-        textbox.set('width', 100);
-        canvas.renderAll();
-      }
-    });
-
-    textbox.on('changed', () => {
-      canvas.renderAll();
-      if ((textbox as any).autoSized && textbox.width) {
-        textbox.set('width', (textbox as any).getOptimalSize().width);
-      }
-    });
-    
-    canvas.add(textbox);
-    canvas.setActiveObject(textbox);
-    textbox.enterEditing();
-    canvas.renderAll();
-  };
-
-  // Main effect to initialize canvas and listeners
+  // Main effect to render the page
   useEffect(() => {
-    if (!isOpen) {
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
-      }
-      return;
-    }
+    renderPage();
+  }, [isOpen, pdfDoc, pageIndex, renderPage]);
 
-    const timeoutId = setTimeout(() => {
-      if (!canvasRef.current) {
-        return;
-      }
-      
-      const canvas = new fabric.Canvas(canvasRef.current, {
-        // This is important to ensure the canvas is responsive
-        // to clicks even when scaled.
-        enableRetinaScaling: false,
-      });
-      fabricCanvasRef.current = canvas;
-
-      renderPage(canvas);
-
-      const handleMouseDown = (options: fabric.IEvent) => {
-        const tool = activeToolRef.current;
-        if (!options.target && tool === 'text') {
-          const pointer = canvas.getPointer(options.e);
-          addTextAnnotation(pointer.x, pointer.y);
+  // Effect to handle keyboard events
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.key === 'Backspace' || e.key === 'Delete') && selectedAnnotationId) {
+            handleDeleteAnnotation(selectedAnnotationId);
         }
-      };
-
-      const handleSelection = (e: fabric.IEvent) => {
-        if (e.target) {
-          updateToolbarForSelection(e.target);
-        }
-      };
-
-      canvas.on('mouse:down', handleMouseDown as (e: fabric.IEvent<Event>) => void);
-      canvas.on('selection:created', handleSelection as (e: fabric.IEvent<Event>) => void);
-      canvas.on('selection:updated', handleSelection as (e: fabric.IEvent<Event>) => void);
-
-    }, 100); // Small delay to ensure canvas element is mounted
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (fabricCanvasRef.current) {
-        // Clean up listeners
-        fabricCanvasRef.current.off('mouse:down');
-        fabricCanvasRef.current.off('selection:created');
-        fabricCanvasRef.current.off('selection:updated');
-      }
     };
-  }, [isOpen, pdfDoc, pageIndex, renderPage, updateToolbarForSelection]);
-  
-  useEffect(() => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    
-    if (activeTool === 'select') {
-      canvas.isDrawingMode = false;
-      canvas.selection = true;
-      canvas.forEachObject(obj => obj.set({ selectable: true }));
-    } else if (activeTool === 'pen') {
-      canvas.isDrawingMode = true;
-      canvas.freeDrawingBrush.color = strokeColor;
-      canvas.freeDrawingBrush.width = strokeWidth;
-    } else {
-      canvas.isDrawingMode = false;
-      canvas.selection = false;
-      canvas.forEachObject(obj => obj.set({ selectable: false }));
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedAnnotationId]);
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+
+    // Deselect if clicking on the container itself, not an annotation
+    if (target.id === 'annotation-container' && selectedAnnotationId) {
+        setSelectedAnnotationId(null);
     }
-    canvas.renderAll();
 
-  }, [activeTool, strokeColor, strokeWidth]);
-
-
-  const applyStyleToSelection = (style: Partial<fabric.ITextboxOptions>) => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    const activeObject = canvas.getActiveObject();
-    if (activeObject instanceof fabric.Textbox) {
-      activeObject.set(style);
-      if ('autoSized' in (style as any)) {
-        (activeObject as any).autoSized = (style as any).autoSized;
-      }
-      canvas.renderAll();
+    if (activeTool === 'text') {
+        const rect = target.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / zoom;
+        const y = (e.clientY - rect.top) / zoom;
+        addTextAnnotation(x, y);
+    } else if (activeTool === 'check' || activeTool === 'cross') {
+        const rect = target.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / zoom;
+        const y = (e.clientY - rect.top) / zoom;
+        addIconAnnotation(x, y, activeTool);
     }
   };
-
-  useEffect(() => { applyStyleToSelection({ fill: textColor }) }, [textColor]);
-  useEffect(() => { applyStyleToSelection({ fontSize }) }, [fontSize]);
-  useEffect(() => { applyStyleToSelection({ fontFamily }) }, [fontFamily]);
-  useEffect(() => { applyStyleToSelection({ fontWeight: isBold ? 'bold' : 'normal' }) }, [isBold]);
-  useEffect(() => { applyStyleToSelection({ fontStyle: isItalic ? 'italic' : 'normal' }) }, [isItalic]);
-  useEffect(() => { 
-    if (isTextWrapping) {
-      applyStyleToSelection({ width: 200, splitByGrapheme: true, ...( { autoSized: false } as any) });
-    } else {
-      applyStyleToSelection({ width: undefined, splitByGrapheme: false, ...( { autoSized: true } as any) });
-    }
-  }, [isTextWrapping]);
   
-  const deleteSelected = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-    const activeObjects = canvas.getActiveObjects();
-    if (activeObjects.length > 0) {
-      activeObjects.forEach(obj => canvas.remove(obj));
-      canvas.discardActiveObject();
-      canvas.renderAll();
-    }
-  }
+  const addTextAnnotation = (x: number, y: number) => {
+    const newAnnotation: TextAnnotation = {
+        id: getUniqueId('text'),
+        type: 'text',
+        x,
+        y,
+        text: 'Type here...',
+        fontSize,
+        fontColor: textColor,
+        width: 150,
+        height: 25,
+        isEditing: true, // Start in editing mode
+    };
+    setAnnotations(prev => [...prev, newAnnotation]);
+    setSelectedAnnotationId(newAnnotation.id);
+  };
+  
+  const addIconAnnotation = (x: number, y: number, iconType: 'check' | 'cross') => {
+    const newAnnotation: IconAnnotation = {
+        id: getUniqueId(iconType),
+        type: 'icon',
+        iconType,
+        x,
+        y,
+        size: 50, // Default size
+        strokeColor,
+        strokeWidth,
+    };
+    setAnnotations(prev => [...prev, newAnnotation]);
+    setSelectedAnnotationId(newAnnotation.id);
+    setActiveTool('select'); // Switch to select tool
+  };
+  
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, delta } = event;
+    const draggedId = active.id as string;
+    
+    setAnnotations(prev => 
+        prev.map(ann => {
+            if (ann.id === draggedId) {
+                return {
+                    ...ann,
+                    x: ann.x + delta.x / zoom,
+                    y: ann.y + delta.y / zoom,
+                }
+            }
+            return ann;
+        })
+    );
+  };
+  
+  const handleDeleteAnnotation = (idToDelete: string) => {
+    setAnnotations(prev => prev.filter(ann => ann.id !== idToDelete));
+    setSelectedAnnotationId(null);
+  };
 
+  const handleUpdateTextAnnotation = (id: string, newText: string) => {
+    setAnnotations(prev =>
+      prev.map(ann => (ann.id === id && ann.type === 'text' ? { ...ann, text: newText } : ann))
+    );
+  };
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -277,64 +228,68 @@ export function AnnotationPage({
       const page = finalDoc.getPage(pageIndex);
       const { width: pageWidth, height: pageHeight } = page.getSize();
       
-      const canvas = fabricCanvasRef.current;
-      if (!canvas) return;
+      const scaleX = pageWidth / pageDimensions.width;
+      const scaleY = pageHeight / pageDimensions.height;
 
-      const scaleFactorX = pageWidth / canvas.getWidth();
-      const scaleFactorY = pageHeight / canvas.getHeight();
-      
       const helveticaFont = await finalDoc.embedFont(StandardFonts.Helvetica);
-      const helveticaBoldFont = await finalDoc.embedFont(StandardFonts.HelveticaBold);
-      const helveticaItalicFont = await finalDoc.embedFont(StandardFonts.HelveticaOblique);
-      const helveticaBoldItalicFont = await finalDoc.embedFont(StandardFonts.HelveticaBoldOblique);
-      const timesRomanFont = await finalDoc.embedFont(StandardFonts.TimesRoman);
-      const timesRomanBoldFont = await finalDoc.embedFont(StandardFonts.TimesRomanBold);
-      const timesRomanItalicFont = await finalDoc.embedFont(StandardFonts.TimesRomanItalic);
-      const timesRomanBoldItalicFont = await finalDoc.embedFont(StandardFonts.TimesRomanBoldItalic);
-      const courierFont = await finalDoc.embedFont(StandardFonts.Courier);
-      const courierBoldFont = await finalDoc.embedFont(StandardFonts.CourierBold);
-      const courierItalicFont = await finalDoc.embedFont(StandardFonts.CourierOblique);
-      const courierBoldItalicFont = await finalDoc.embedFont(StandardFonts.CourierBoldOblique);
 
-      for (const obj of canvas.getObjects()) {
-        if (obj.type === 'textbox') {
-          const textbox = obj as fabric.Textbox;
-          const text = textbox.text || '';
-          
-          const [r, g, b] = new fabric.Color(textbox.fill as string).getSource();
-          
-          let font;
-          if (textbox.fontFamily?.includes('Times')) {
-            if (textbox.fontWeight === 'bold' && textbox.fontStyle === 'italic') font = timesRomanBoldItalicFont;
-            else if (textbox.fontWeight === 'bold') font = timesRomanBoldFont;
-            else if (textbox.fontStyle === 'italic') font = timesRomanItalicFont;
-            else font = timesRomanFont;
-          } else if (textbox.fontFamily?.includes('Courier')) {
-            if (textbox.fontWeight === 'bold' && textbox.fontStyle === 'italic') font = courierBoldItalicFont;
-            else if (textbox.fontWeight === 'bold') font = courierBoldFont;
-            else if (textbox.fontStyle === 'italic') font = courierItalicFont;
-            else font = courierFont;
-          } else { // Default to Helvetica
-            if (textbox.fontWeight === 'bold' && textbox.fontStyle === 'italic') font = helveticaBoldItalicFont;
-            else if (textbox.fontWeight === 'bold') font = helveticaBoldFont;
-            else if (textbox.fontStyle === 'italic') font = helveticaItalicFont;
-            else font = helveticaFont;
-          }
-          
-          page.drawText(text, {
-            x: (textbox.left || 0) * scaleFactorX,
-            y: pageHeight - ((textbox.top || 0) + (textbox.height || 0)) * scaleFactorY,
-            font: font,
-            size: (textbox.fontSize || 16) * scaleFactorY,
-            color: rgb(r / 255, g / 255, b / 255),
-            lineHeight: (textbox.lineHeight || 1.16) * (textbox.fontSize || 16) * scaleFactorY,
-            wordBreaks: text.split(' '),
-          });
+      for (const annotation of annotations) {
+        if (annotation.type === 'text') {
+            const color = hexToRgb(annotation.fontColor);
+            if (!color) continue;
+            page.drawText(annotation.text, {
+                x: annotation.x * scaleX,
+                y: pageHeight - (annotation.y * scaleY) - (annotation.fontSize * scaleY), // Adjust y-position
+                font: helveticaFont,
+                size: annotation.fontSize * scaleY,
+                color: rgb(color.r / 255, color.g / 255, color.b / 255),
+            });
+        } else if (annotation.type === 'icon') {
+            const color = hexToRgb(annotation.strokeColor);
+            if (!color) continue;
+
+            const x = annotation.x * scaleX;
+            const y = pageHeight - (annotation.y * scaleY) - (annotation.size * scaleY);
+            const size = annotation.size * scaleX;
+            const lineThickness = annotation.strokeWidth;
+            
+            if (annotation.iconType === 'check') {
+                page.drawLine({
+                    start: { x: x + size * 0.1, y: y + size * 0.5 },
+                    end: { x: x + size * 0.4, y: y + size * 0.2 },
+                    thickness: lineThickness,
+                    color: rgb(color.r/255, color.g/255, color.b/255),
+                });
+                 page.drawLine({
+                    start: { x: x + size * 0.4, y: y + size * 0.2 },
+                    end: { x: x + size * 0.9, y: y + size * 0.8 },
+                    thickness: lineThickness,
+                    color: rgb(color.r/255, color.g/255, color.b/255),
+                });
+            } else if (annotation.iconType === 'cross') {
+                page.drawLine({
+                    start: { x: x, y: y },
+                    end: { x: x + size, y: y + size },
+                    thickness: lineThickness,
+                    color: rgb(color.r/255, color.g/255, color.b/255),
+                });
+                page.drawLine({
+                    start: { x: x, y: y + size },
+                    end: { x: x + size, y: y },
+                    thickness: lineThickness,
+                    color: rgb(color.r/255, color.g/255, color.b/255),
+                });
+            }
         }
       }
       onSave(finalDoc);
     } catch(e) {
       console.error("Failed to save annotations", e);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: "Could not save annotations to the PDF.",
+      });
     } finally {
       setIsLoading(false);
       onClose();
@@ -357,37 +312,62 @@ export function AnnotationPage({
             setTextColor={setTextColor}
             fontSize={fontSize}
             setFontSize={setFontSize}
-            fontFamily={fontFamily}
-            setFontFamily={setFontFamily}
-            isBold={isBold}
-            setIsBold={setIsBold}
-            isItalic={isItalic}
-            setIsItalic={setIsItalic}
             strokeColor={strokeColor}
             setStrokeColor={setStrokeColor}
             strokeWidth={strokeWidth}
             setStrokeWidth={setStrokeWidth}
-            isTextWrapping={isTextWrapping}
-            setIsTextWrapping={setIsTextWrapping}
             zoom={zoom}
             setZoom={setZoom}
-            onDelete={deleteSelected}
+            onDelete={() => selectedAnnotationId && handleDeleteAnnotation(selectedAnnotationId)}
           />
           <div className="flex-grow relative overflow-auto border rounded-md bg-muted/20 flex justify-start">
             {isLoading && (
-              <div className="absolute inset-0 z-10 flex h-full items-center justify-center bg-background/50">
+              <div className="absolute inset-0 z-20 flex h-full items-center justify-center bg-background/50">
                 <Loader className="h-8 w-8 animate-spin" />
               </div>
             )}
-            <div
-              className="relative"
-              style={{
-                transform: `scale(${zoom})`,
-                transformOrigin: 'top left',
-              }}
-            >
-              <canvas ref={canvasRef} />
-            </div>
+            <DndContext onDragEnd={handleDragEnd}>
+              <div
+                id="annotation-container"
+                className="relative"
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'top left',
+                  width: pageDimensions.width,
+                  height: pageDimensions.height,
+                }}
+                onClick={handleContainerClick}
+              >
+                {pageImageUrl ? (
+                    <img src={pageImageUrl} alt={`Page ${pageIndex + 1}`} style={{ width: '100%', height: '100%'}} />
+                ) : !isLoading && (
+                    <div className="w-full h-full flex items-center justify-center text-destructive-foreground">Failed to load page preview.</div>
+                )}
+                
+                {annotations.map(annotation => {
+                    if (annotation.type === 'text') {
+                        return <DraggableAnnotation 
+                                    key={annotation.id}
+                                    annotation={annotation}
+                                    isSelected={annotation.id === selectedAnnotationId}
+                                    onSelect={() => setSelectedAnnotationId(annotation.id)}
+                                    onDelete={() => handleDeleteAnnotation(annotation.id)}
+                                    onTextChange={(newText) => handleUpdateTextAnnotation(annotation.id, newText)}
+                                />;
+                    }
+                    if (annotation.type === 'icon') {
+                        return <DraggableIconAnnotation
+                                    key={annotation.id}
+                                    annotation={annotation}
+                                    isSelected={annotation.id === selectedAnnotationId}
+                                    onSelect={() => setSelectedAnnotationId(annotation.id)}
+                                    onDelete={() => handleDeleteAnnotation(annotation.id)}
+                                />;
+                    }
+                    return null;
+                })}
+              </div>
+            </DndContext>
           </div>
         </div>
 
@@ -404,3 +384,5 @@ export function AnnotationPage({
     </Dialog>
   );
 }
+
+    

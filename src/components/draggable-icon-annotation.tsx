@@ -68,3 +68,5 @@ export function DraggableIconAnnotation({ annotation, isSelected, onSelect, onDe
         </div>
     );
 }
+
+    
