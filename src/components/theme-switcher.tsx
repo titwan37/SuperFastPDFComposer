@@ -11,7 +11,6 @@ export function ThemeSwitcher() {
   const [theme, setTheme] = useState("light");
 
   useEffect(() => {
-    setIsMounted(true);
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
       setTheme(storedTheme);
@@ -22,6 +21,7 @@ export function ThemeSwitcher() {
       const initialTheme = isNight ? "dark" : "light";
       setTheme(initialTheme);
     }
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ export function PageHeader() {
       </h1>
       <div className="mt-4 flex items-center justify-between">
         <p className="max-w-xl text-sm text-muted-foreground">
-          Visually compose your new PDF. Drag, drop, reorder, merge, and sign pages from multiple documents right in your browser.
+          Visually compose your new PDF. Drag, drop, reorder, merge, edit and sign pages from multiple documents right in your browser.
         </p>
         <div className="flex-shrink-0">
           <ThemeSwitcher />
