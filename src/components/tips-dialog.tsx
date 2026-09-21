@@ -22,19 +22,15 @@ export function TipsDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const handleConfirm = () => {
-    onConfirm();
-    onClose();
-  }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Support 'SuperFast PDF Composer'!</DialogTitle>
           <DialogDescription>
-          🎉 Love 'SuperFast PDF Composer'?
-          A quick tip ☕ ($1–5) helps keep it free, fast, and ad-free — for everyone.
-          💙 Thanks — every contribution counts! 🙌
+            🎉 Love 'SuperFast PDF Composer'?
+            A quick tip ☕ ($1–5) helps keep it free, fast, and ad-free — for everyone.
+            💙 Thanks — every contribution counts! 🙌
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -45,22 +41,22 @@ export function TipsDialog({
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="flex flex-col items-center justify-center space-y-2">
-                 {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or click the buttonto leave a tip.</p> */}
-                 <div className="grid grid-cols-2">
+                {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or click the buttonto leave a tip.</p> */}
+                <div className="grid grid-cols-2">
                   <div className="rounded-lg border p-2">
-                    <Image src="/bmc_qrcode.png" alt="Buy Me a Coffee QR Code" data-ai-hint="qr code" width={150} height={150} />
+                    <Image src="/superfastpdfcomposer/bmc_qrcode.png" alt="Buy Me a Coffee QR Code" data-ai-hint="qr code" width={150} height={150} />
                   </div>
                   <div className="flex w-full flex-row items-center justify-center gap-2">
-                  <div className="grid grid-rows-2 justify-center gap-2">
-                    <Coffee className="h-12 w-12 justify-center text-yellow-500" />
-                    <Button asChild className="bg-yellow-500 text-white hover:bg-yellow-600">
-                      <a href="https://buymeacoffee.com/titwan" target="_blank" rel="noopener noreferrer">
-                        Buy Me a Coffee
-                      </a>
-                    </Button>
+                    <div className="grid grid-rows-2 justify-center gap-2">
+                      <Coffee className="h-12 w-12 justify-center text-yellow-500" />
+                      <Button asChild className="bg-yellow-500 text-white hover:bg-yellow-600">
+                        <a href="https://buymeacoffee.com/titwan" target="_blank" rel="noopener noreferrer">
+                          Buy Me a Coffee
+                        </a>
+                      </Button>
                     </div>
                   </div>
-                 </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -74,7 +70,7 @@ export function TipsDialog({
                 {/* <p className="text-center text-sm text-muted-foreground">Scan the QR code or use a quick link.</p> */}
                 <div className="grid grid-cols-2">
                   <div className="rounded-lg border p-2">
-                    <Image src="/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={150} height={150} />
+                    <Image src="/superfastpdfcomposer/paypal-qrcode.png" alt="PayPal QR Code for tips" data-ai-hint="qr code" width={150} height={150} />
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <Button variant="outline" asChild>
@@ -86,14 +82,14 @@ export function TipsDialog({
                     <Button variant="outline" asChild>
                       <a href="https://paypal.me/AntoineFalempin/5" target="_blank" rel="noopener noreferrer">$5</a>
                     </Button>
-                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
         <DialogFooter className="sm:justify-center pt-4">
-           <Button type="button" onClick={handleConfirm}>
+          <Button type="button" onClick={onConfirm}>
             Continue to Download
           </Button>
         </DialogFooter>

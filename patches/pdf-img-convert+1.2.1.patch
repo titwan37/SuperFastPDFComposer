@@ -1,0 +1,22 @@
+diff --git a/node_modules/pdf-img-convert/index.js b/node_modules/pdf-img-convert/index.js
+index a31154c..527b9c9 100644
+--- a/node_modules/pdf-img-convert/index.js
++++ b/node_modules/pdf-img-convert/index.js
+@@ -1,6 +1,6 @@
+ var pdfjs = require("pdfjs-dist/legacy/build/pdf.js");
+-const { Canvas, Image } = require("canvas");
+-pdfjs.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.js")
++const { createCanvas, Image } = require("canvas");
++pdfjs.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.min.js")
+ 
+ class NodeCanvasFactory {
+   create(width, height) {
+@@ -9,7 +9,7 @@
+       return;
+     }
+ 
+-    var canvas = new Canvas(width, height);
++    var canvas = createCanvas(width, height);
+     var context = canvas.getContext("2d");
+     return {
+       canvas: canvas,

@@ -40,7 +40,7 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
         fontSize: `${annotation.fontSize}px`,
     };
     
-    const stopPropagation = (e: React.MouseEvent | React.FocusEvent | React.ChangeEvent) => {
+    const stopPropagation = (e: React.SyntheticEvent | Event) => {
         e.stopPropagation();
     }
 
@@ -81,9 +81,17 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
                 onSelect();
             }}
             onDoubleClick={(e) => {
-                 stopPropagation(e);
-                 setIsEditing(true);
+                stopPropagation(e);
+                setIsEditing(true);
             }}
+            onContextMenu={(e) => {
+                if (!isEditing) {
+                    e.preventDefault();
+                    stopPropagation(e);
+                    onDelete();
+                }
+            }}
+            title={isEditing ? undefined : "Drag to move • Double-click to edit • Right-click to delete"}
             className={cn(
                 "group z-10", 
                 !isEditing && "cursor-move"
@@ -97,13 +105,15 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
                     onResizeStop({ width: data.size.width, height: data.size.height });
                 }}
                 className={cn("box-border p-1", isSelected ? "border border-dashed border-primary" : "border border-transparent hover:border-primary/50")}
-                handle={(props, ref) => (
+                handle={(resizeHandleAxis, ref) => (
                     isSelected ? 
                     <span 
                         ref={ref}
-                        className="react-resizable-handle absolute bottom-0 right-0 h-4 w-4 cursor-se-resize bg-primary rounded-full border-2 border-background" 
+                        className="react-resizable-handle absolute -bottom-1.5 -right-1.5 h-4 w-4 cursor-se-resize bg-primary rounded-full border-2 border-background shadow-md hover:scale-125 transition-transform z-30" 
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         onClick={stopPropagation}
-                        {...props}
                     />
                     : <></>
                 )}
@@ -119,18 +129,25 @@ export function DraggableAnnotation({ annotation, isSelected, onSelect, onDelete
                     autoFocus={isEditing}
                 />
             </ResizableBox>
-            {isSelected && !isEditing && (
+            {!isEditing && (
                  <Button
                     variant="destructive"
                     size="icon"
-                    className="absolute -top-3 -right-3 h-6 w-6 cursor-pointer rounded-full opacity-100"
+                    className={cn(
+                        "absolute -top-3 -right-3 h-6 w-6 cursor-pointer rounded-full shadow-md z-30 transition-all hover:scale-110",
+                        isSelected ? "opacity-100 scale-100" : "opacity-0 group-hover:opacity-100 group-hover:scale-100"
+                    )}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     onClick={(e) => {
                         stopPropagation(e);
                         onDelete();
                     }}
-                    aria-label="Delete annotation"
+                    aria-label="Delete text annotation"
+                    title="Delete text"
                  >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                  </Button>
             )}
         </div>

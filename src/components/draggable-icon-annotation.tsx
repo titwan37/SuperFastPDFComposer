@@ -31,7 +31,7 @@ export function DraggableIconAnnotation({ annotation, isSelected, onSelect, onDe
         color: annotation.strokeColor,
     };
     
-    const stopPropagation = (e: React.MouseEvent) => {
+    const stopPropagation = (e: React.SyntheticEvent | Event) => {
         e.stopPropagation();
     }
 
@@ -48,23 +48,34 @@ export function DraggableIconAnnotation({ annotation, isSelected, onSelect, onDe
                 onSelect();
             }}
             onDoubleClick={stopPropagation}
-            className={cn("group cursor-move border border-dashed flex items-center justify-center", isSelected ? "border-primary z-10" : "border-transparent hover:border-primary/50")}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                stopPropagation(e);
+                onDelete();
+            }}
+            title="Drag to move • Right-click to delete"
+            className={cn("group cursor-move border border-dashed flex items-center justify-center rounded-md transition-colors", isSelected ? "border-primary z-10 bg-primary/5" : "border-transparent hover:border-primary/50")}
         >
              <IconComponent className="w-full h-full" strokeWidth={annotation.strokeWidth} />
-            {isSelected && (
-                 <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-3 -right-3 h-6 w-6 cursor-pointer rounded-full opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                        stopPropagation(e);
-                        onDelete();
-                    }}
-                    aria-label="Delete annotation"
-                 >
-                    <Trash2 className="h-4 w-4" />
-                 </Button>
-            )}
+             <Button
+                variant="destructive"
+                size="icon"
+                className={cn(
+                    "absolute -top-3 -right-3 h-6 w-6 cursor-pointer rounded-full shadow-md z-30 transition-all hover:scale-110",
+                    isSelected ? "opacity-100 scale-100" : "opacity-0 group-hover:opacity-100 group-hover:scale-100"
+                )}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                    stopPropagation(e);
+                    onDelete();
+                }}
+                aria-label="Delete annotation"
+                title="Delete icon"
+             >
+                <Trash2 className="h-3.5 w-3.5" />
+             </Button>
         </div>
     );
 }

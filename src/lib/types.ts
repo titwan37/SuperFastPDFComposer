@@ -7,6 +7,7 @@ export type TargetPage = {
   id: string; // Unique ID for dnd-kit
   docId: string; // ID of the source document this page belongs to
   originalPageIndex: number; // The page's index in its original document
+  annotations?: Annotation[]; // Optional array of annotations for this page
 };
 
 // Represents a loaded source PDF document
@@ -14,13 +15,14 @@ export type SourceDoc = {
   id: string; // Unique ID for the document
   doc: PDFDocument; // pdf-lib document for manipulation
   pdfjsDoc: PDFDocumentProxy; // pdf.js document for rendering
+  file: File; // The original File object
   filename: string;
   thumbnailUrls: (string | undefined | null)[]; // Array of data URLs for page thumbnails
 };
 
 export type SignaturePosition = 'left' | 'center' | 'right';
 
-export type Annotation = TextAnnotation | DrawingAnnotation | IconAnnotation;
+export type Annotation = TextAnnotation | DrawingAnnotation | IconAnnotation | SignatureAnnotation;
 
 export type TextAnnotation = {
   id: string;
@@ -54,4 +56,12 @@ export type IconAnnotation = {
   strokeWidth: number;
 };
 
-    
+export type SignatureAnnotation = {
+    id: string;
+    type: 'signature';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    dataUrl: string;
+};

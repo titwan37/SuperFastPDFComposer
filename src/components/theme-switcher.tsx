@@ -3,12 +3,10 @@
 
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Sun, Moon } from "lucide-react";
 
 export function ThemeSwitcher() {
-  const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState<string | null>(null);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
@@ -18,26 +16,25 @@ export function ThemeSwitcher() {
       const hour = new Date().getHours();
       // Set dark theme from 6 PM to 8 AM
       const isNight = hour < 8 || hour >= 18;
-      const initialTheme = isNight ? "dark" : "light";
-      setTheme(initialTheme);
+      setTheme(isNight ? "dark" : "light");
     }
-    setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isMounted) {
+    if (theme) {
       document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(theme);
       localStorage.setItem("theme", theme);
     }
-  }, [theme, isMounted]);
+  }, [theme]);
 
   const handleThemeChange = (isChecked: boolean) => {
     setTheme(isChecked ? "dark" : "light");
   };
 
-  if (!isMounted) {
-    return null; // Avoid rendering on the server to prevent hydration mismatch
+  // Render nothing on the server or initial client render to avoid hydration mismatch
+  if (theme === null) {
+    return null;
   }
 
   return (

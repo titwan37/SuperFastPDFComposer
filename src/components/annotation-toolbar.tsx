@@ -1,7 +1,6 @@
-
 "use client";
 
-import { MousePointer2, Type, Pen, ZoomIn, ZoomOut, Check, X, Trash2 } from 'lucide-react';
+import { MousePointer2, Type, Pen, ZoomIn, ZoomOut, Check, X, Trash2, FileSignature, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Input } from './ui/input';
@@ -29,6 +28,9 @@ interface AnnotationToolbarProps {
     zoom: number;
     setZoom: (zoom: number | ((prevZoom: number) => number)) => void;
     onDelete: () => void;
+    hasSelection?: boolean;
+    onClearAll?: () => void;
+    onAddSignature?: () => void;
 }
 
 export function AnnotationToolbar({
@@ -45,6 +47,9 @@ export function AnnotationToolbar({
     zoom,
     setZoom,
     onDelete,
+    hasSelection = false,
+    onClearAll,
+    onAddSignature,
 }: AnnotationToolbarProps) {
 
   const isTextToolActive = activeTool === 'text';
@@ -89,12 +94,11 @@ export function AnnotationToolbar({
             size="icon"
             onClick={() => setActiveTool('pen')}
             aria-label="Pen Tool"
-            disabled
           >
             <Pen className="h-5 w-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent><p>Pen Tool (P) - Disabled</p></TooltipContent>
+        <TooltipContent><p>Pen Tool (P)</p></TooltipContent>
       </Tooltip>
        <Tooltip>
         <TooltipTrigger asChild>
@@ -123,20 +127,61 @@ export function AnnotationToolbar({
         <TooltipContent><p>Cross Tool</p></TooltipContent>
       </Tooltip>
       
+      {onAddSignature && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAddSignature}
+              aria-label="Add Signature"
+              className="gap-1.5 px-2.5 font-medium text-xs text-primary border-primary/30 hover:bg-primary/10"
+            >
+              <FileSignature className="h-4 w-4" />
+              <span>Signature</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p>Add Signature to Page (S)</p></TooltipContent>
+        </Tooltip>
+      )}
+
        <Tooltip>
         <TooltipTrigger asChild>
             <Button
-                variant="ghost"
-                size="icon"
+                variant={hasSelection ? "destructive" : "ghost"}
+                size="sm"
                 onClick={onDelete}
                 aria-label="Delete Selection"
-                disabled={!isSelectToolActive}
+                disabled={!hasSelection}
+                className={cn(
+                  "h-8 gap-1.5 px-2.5 transition-all text-xs font-medium",
+                  hasSelection && "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm"
+                )}
             >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
             </Button>
         </TooltipTrigger>
-        <TooltipContent><p>Delete Selection (Backspace)</p></TooltipContent>
+        <TooltipContent><p>Delete Selected Annotation (Del / Backspace)</p></TooltipContent>
       </Tooltip>
+
+      {onClearAll && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearAll}
+              aria-label="Clear All Annotations"
+              className="h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p>Clear All Annotations on this Page</p></TooltipContent>
+        </Tooltip>
+      )}
 
       <Separator orientation="vertical" className="h-8" />
       

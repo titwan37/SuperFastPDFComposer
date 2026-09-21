@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import * as TogglePrimitive from "@radix-ui/react-toggle"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -28,18 +27,25 @@ const toggleVariants = cva(
   }
 )
 
-const Toggle = React.forwardRef<
-  React.ElementRef<typeof TogglePrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> &
-    VariantProps<typeof toggleVariants>
->(({ className, variant, size, ...props }, ref) => (
-  <TogglePrimitive.Root
-    ref={ref}
-    className={cn(toggleVariants({ variant, size, className }))}
-    {...props}
-  />
-))
+interface ToggleProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof toggleVariants> {
+  pressed?: boolean;
+}
 
-Toggle.displayName = TogglePrimitive.Root.displayName
+const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
+  ({ className, variant, size, pressed, ...props }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      aria-pressed={pressed}
+      data-state={pressed ? "on" : "off"}
+      className={cn(toggleVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+)
+
+Toggle.displayName = "Toggle"
 
 export { Toggle, toggleVariants }
