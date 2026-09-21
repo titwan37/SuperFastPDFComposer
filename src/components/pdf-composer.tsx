@@ -63,6 +63,7 @@ import { PagePreviewDialog } from "./page-preview-dialog";
 import { OptimizationDialog } from "./optimization-dialog";
 import { optimizePdf, downloadBlob } from "@/services/client-pdf-optimizer.service";
 import { applyAnnotationsToPdfPage } from "@/lib/pdf-annotation-renderer";
+import { exportTargetPagesToWord } from "@/services/docx-exporter.service";
 
 type UniqueId = string;
 
@@ -765,62 +766,32 @@ export function PdfComposer({
 
   const handleConvertToWord = async () => {
     if (targetPages.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "Empty Document",
-            description: "Add some pages to the target document before converting.",
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: "Empty Document",
+        description: "Add some pages to the target document before converting.",
+      });
+      return;
     }
 
     setIsLoading(true);
     setLoadingMessage("Converting to Word...");
     try {
-        const { Document, Packer, Paragraph } = await import('docx');
-        const docx = await import('docx');
-        const paragraphs: any[] = [];
-
-        for (const targetPage of targetPages) {
-            const sourceDocData = sourceDocs[targetPage.docId];
-            if (!sourceDocData?.pdfjsDoc) continue;
-
-            const page = await sourceDocData.pdfjsDoc.getPage(targetPage.originalPageIndex + 1);
-            const textContent = await page.getTextContent();
-            
-            for (const item of textContent.items as { str: string }[]) {
-                paragraphs.push(new docx.Paragraph(item.str));
-            }
-            
-            paragraphs.push(new docx.Paragraph({ text: "", pageBreakBefore: true }));
-        }
-        
-        if (paragraphs.length > 0) {
-            paragraphs.pop();
-        }
-
-        const doc = new Document({
-            sections: [{
-                children: paragraphs,
-            }],
-        });
-
-        const blob = await Packer.toBlob(doc);
-        saveAs(blob, `composed-document-${new Date().toISOString().split("T")[0]}.docx`);
-
-        toast({
-            title: "Conversion Complete",
-            description: "Your document has been converted to Word.",
-        });
+      await exportTargetPagesToWord(targetPages, sourceDocs);
+      toast({
+        title: "Conversion Complete",
+        description: "Your document has been converted to Word.",
+      });
     } catch (error) {
-        console.error("Failed to convert to Word:", error);
-        toast({
-            variant: "destructive",
-            title: "Conversion Error",
-            description: "There was an issue converting your document to Word.",
-        });
+      console.error("Failed to convert to Word:", error);
+      toast({
+        variant: "destructive",
+        title: "Conversion Error",
+        description: "There was an issue converting your document to Word.",
+      });
     } finally {
-        setIsLoading(false);
-        setLoadingMessage("");
+      setIsLoading(false);
+      setLoadingMessage("");
     }
   };
 

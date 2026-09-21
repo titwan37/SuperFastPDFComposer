@@ -117,13 +117,16 @@ export async function applyAnnotationsToPdfPage(
           });
         }
       } else if (annotation.type === 'signature') {
-        const pngImage = await pdfDoc.embedPng(annotation.dataUrl);
+        const isJpg = annotation.dataUrl.startsWith('data:image/jpeg') || annotation.dataUrl.startsWith('data:image/jpg');
+        const embeddedImage = isJpg
+          ? await pdfDoc.embedJpg(annotation.dataUrl)
+          : await pdfDoc.embedPng(annotation.dataUrl);
         const x = annotation.x * scale;
         const width = annotation.width * scale;
         const height = annotation.height * scale;
         const y = pageHeight - (annotation.y * scale) - height;
 
-        page.drawImage(pngImage, {
+        page.drawImage(embeddedImage, {
           x,
           y,
           width,
