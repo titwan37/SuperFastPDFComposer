@@ -9,7 +9,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader, RotateCw, FileSignature, FileEdit, RotateCcw, ChevronLeft, ChevronRight, Download, RefreshCw, Check, X } from "lucide-react";
+import {
+  Loader,
+  RotateCw,
+  FileSignature,
+  FileEdit,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  RefreshCw,
+  Check,
+  X,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Tooltip,
@@ -20,7 +32,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import type { Annotation } from "@/lib/types";
+import type { Annotation, HighlighterColor } from "@/lib/types";
+
+const HIGHLIGHTER_PREVIEW_MAP: Record<HighlighterColor, string> = {
+  yellow: '#facc15',
+  green: '#4ade80',
+  pink: '#f472b6',
+  blue: '#38bdf8',
+};
 
 interface PagePreviewDialogProps {
   isOpen: boolean;
@@ -64,12 +83,12 @@ export function PagePreviewDialog({
 
   const renderPage = useCallback(async () => {
     if (renderTaskRef.current) {
-        renderTaskRef.current.cancel();
+      renderTaskRef.current.cancel();
     }
-    
+
     if (!pdfDocProxy || !canvasRef.current) {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
     setIsLoading(true);
 
@@ -102,7 +121,6 @@ export function PagePreviewDialog({
       renderTaskRef.current = task;
       await task.promise;
       renderTaskRef.current = null;
-
     } catch (e: any) {
       if (e.name !== 'RenderingCancelledException') {
         console.error("Failed to render page preview", e);
@@ -138,70 +156,87 @@ export function PagePreviewDialog({
             </DialogTitle>
             {annotations.length > 0 && (
               <span className="text-[11px] font-semibold bg-primary/15 text-primary px-2.5 py-0.5 rounded-full border border-primary/20">
-                {annotations.filter(a => a.type === 'signature').length > 0 ? 'Signed' : 'Annotated'} ({annotations.length})
+                {annotations.filter((a) => a.type === 'signature').length > 0
+                  ? 'Signed'
+                  : 'Annotated'}{' '}
+                ({annotations.length})
               </span>
             )}
           </div>
-          
-            <TooltipProvider>
-              <div className="flex items-center gap-2">
+
+          <TooltipProvider>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={renderPage}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Refresh Preview</p>
+                </TooltipContent>
+              </Tooltip>
+              {!isTargetPage && (
                 <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" onClick={renderPage}>
-                            <RefreshCw className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Refresh Preview</p></TooltipContent>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={onSelectAndDrop}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Select and Drop Page</p>
+                  </TooltipContent>
                 </Tooltip>
-                {!isTargetPage && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" onClick={onSelectAndDrop}>
-                                <Download className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Select and Drop Page</p></TooltipContent>
-                    </Tooltip>
-                )}
-                {isTargetPage && (
-                    <>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" onClick={onRotateLeft}>
-                                <RotateCcw className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Rotate 90° Left</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" onClick={onRotateRight}>
-                            <RotateCw className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Rotate 90° Right</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" onClick={onSign} className="border-primary/40 text-primary hover:bg-primary/10">
-                            <FileSignature className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Sign Page</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" onClick={onAnnotate}>
-                            <FileEdit className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Annotate Page</p></TooltipContent>
-                        </Tooltip>
-                    </>
-                )}
-              </div>
-            </TooltipProvider>
-          
+              )}
+              {isTargetPage && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" onClick={onRotateLeft}>
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Rotate 90° Left</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" onClick={onRotateRight}>
+                        <RotateCw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Rotate 90° Right</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={onSign}
+                        className="border-primary/40 text-primary hover:bg-primary/10"
+                      >
+                        <FileSignature className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Sign Page</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button
+                    size="sm"
+                    onClick={onAnnotate}
+                    className="h-8 gap-1.5 px-3 text-xs font-semibold bg-primary text-primary-foreground shadow-sm hover:shadow"
+                  >
+                    <FileEdit className="h-4 w-4" />
+                    <span>Annotate &amp; Tools</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </TooltipProvider>
         </DialogHeader>
         <div className="relative group flex-grow flex items-center justify-center p-4 overflow-auto bg-muted/20 rounded-2xl border">
           {isLoading && (
@@ -209,33 +244,33 @@ export function PagePreviewDialog({
               <Loader className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
-          
-          <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn(
-                  "absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity z-30",
-                  pageNumber <= 1 && "hidden"
-              )}
-              onClick={() => onNavigate('prev')}
-              disabled={pageNumber <= 1}
-              >
-              <ChevronLeft className="h-6 w-6" />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity z-30",
+              pageNumber <= 1 && "hidden"
+            )}
+            onClick={() => onNavigate('prev')}
+            disabled={pageNumber <= 1}
+          >
+            <ChevronLeft className="h-6 w-6" />
           </Button>
-          <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn(
-                  "absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity z-30",
-                  pageNumber >= totalPages && "hidden"
-              )}
-              onClick={() => onNavigate('next')}
-              disabled={pageNumber >= totalPages}
-              >
-              <ChevronRight className="h-6 w-6" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity z-30",
+              pageNumber >= totalPages && "hidden"
+            )}
+            onClick={() => onNavigate('next')}
+            disabled={pageNumber >= totalPages}
+          >
+            <ChevronRight className="h-6 w-6" />
           </Button>
 
-          {/* Page Display with Annotation Overlay */}
+          {/* Page Display with Full Annotation Overlay */}
           <div
             className="relative shadow-lg rounded-lg overflow-hidden bg-white dark:bg-slate-900 border"
             style={{
@@ -245,32 +280,72 @@ export function PagePreviewDialog({
               display: isLoading ? 'none' : 'block',
             }}
           >
-            <canvas
-              ref={canvasRef}
-              className="block w-full h-auto"
-            />
+            <canvas ref={canvasRef} className="block w-full h-auto" />
             {annotations.length > 0 && (
               <div className="absolute inset-0 pointer-events-none select-none">
-                {/* SVG for drawing annotations */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                  {annotations.map(ann => {
-                    if (ann.type !== 'drawing') return null;
+                {/* 1. SVG Layer for Fluorescent Highlighters */}
+                <svg
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  style={{ mixBlendMode: 'multiply' }}
+                >
+                  {annotations.map((ann) => {
+                    if (ann.type !== 'highlighter') return null;
+                    const fluoColor =
+                      HIGHLIGHTER_PREVIEW_MAP[ann.color] || HIGHLIGHTER_PREVIEW_MAP.yellow;
                     return ann.paths.map((path, idx) => (
                       <polyline
                         key={`${ann.id}-${idx}`}
-                        points={path.map(p => `${p.x},${p.y}`).join(' ')}
+                        points={path.map((p) => `${p.x},${p.y}`).join(' ')}
                         fill="none"
-                        stroke={ann.strokeColor}
-                        strokeWidth={ann.strokeWidth}
+                        stroke={fluoColor}
+                        strokeWidth={ann.strokeWidth || 24}
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        opacity={ann.opacity || 0.35}
                       />
                     ));
                   })}
                 </svg>
 
-                {/* Text, Icon, and Signature Overlays */}
-                {annotations.map(ann => {
+                {/* 2. SVG Layer for Standard Drawings & Blackout Markers */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  {annotations.map((ann) => {
+                    if (ann.type !== 'drawing' && ann.type !== 'blackout') return null;
+                    const isBlackout = ann.type === 'blackout';
+                    const stroke = isBlackout ? '#000000' : ann.strokeColor;
+                    const strokeWidth = isBlackout ? ann.strokeWidth || 16 : ann.strokeWidth;
+
+                    return ann.paths.map((path, idx) => (
+                      <polyline
+                        key={`${ann.id}-${idx}`}
+                        points={path.map((p) => `${p.x},${p.y}`).join(' ')}
+                        fill="none"
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity={1}
+                      />
+                    ));
+                  })}
+                </svg>
+
+                {/* 3. Text, Icon, Signature, and Redaction Mask Overlays */}
+                {annotations.map((ann) => {
+                  if (ann.type === 'mask') {
+                    return (
+                      <div
+                        key={ann.id}
+                        className="absolute bg-white border border-gray-100 shadow-sm"
+                        style={{
+                          left: `${ann.x}px`,
+                          top: `${ann.y}px`,
+                          width: `${ann.width}px`,
+                          height: `${ann.height}px`,
+                        }}
+                      />
+                    );
+                  }
                   if (ann.type === 'signature') {
                     return (
                       <div
@@ -335,23 +410,20 @@ export function PagePreviewDialog({
         </div>
 
         <DialogFooter className="border-t pt-4">
-            <div className="w-full space-y-2">
-                <Label htmlFor="quality-slider" className="flex justify-between text-sm">
-                    <span>Optimization Quality</span>
-                    <span className="font-bold text-primary">{optimizationQuality}%</span>
-                </Label>
-                 <Slider
-                    id="quality-slider"
-                    min={1}
-                    max={100}
-                    step={1}
-                    value={[optimizationQuality]}
-                    onValueChange={(value) => setOptimizationQuality(value[0])}
-                />
-                <p className="text-xs text-muted-foreground">
-                    Adjust the quality for the document optimization. Lower values result in smaller file sizes but lower image quality.
-                </p>
-            </div>
+          <div className="w-full space-y-2">
+            <Label htmlFor="quality-slider" className="flex justify-between text-sm">
+              <span>Optimization Quality</span>
+              <span className="text-muted-foreground">{Math.round(optimizationQuality * 100)}%</span>
+            </Label>
+            <Slider
+              id="quality-slider"
+              value={[optimizationQuality]}
+              min={0.1}
+              max={1}
+              step={0.05}
+              onValueChange={([val]) => setOptimizationQuality(val)}
+            />
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

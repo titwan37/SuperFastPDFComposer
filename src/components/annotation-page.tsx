@@ -11,18 +11,36 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader, Trash2 } from "lucide-react";
-import { AnnotationToolbar } from "./annotation-toolbar";
+import { AnnotationToolbar, type AnnotationToolType } from "./annotation-toolbar";
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { DraggableAnnotation } from "./draggable-annotation";
 import { DraggableIconAnnotation } from "./draggable-icon-annotation";
 import { DraggableSignatureAnnotation } from "./draggable-signature-annotation";
+import { DraggableMaskAnnotation } from "./draggable-mask-annotation";
 import { SignatureDialog } from "./signature-dialog";
-import type { Annotation, TextAnnotation, IconAnnotation, DrawingAnnotation, SignatureAnnotation } from '@/lib/types';
+import type {
+  Annotation,
+  TextAnnotation,
+  IconAnnotation,
+  DrawingAnnotation,
+  SignatureAnnotation,
+  RedactionMaskAnnotation,
+  BlackoutMarkerAnnotation,
+  HighlighterAnnotation,
+  HighlighterColor,
+} from '@/lib/types';
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 let uniqueIdCounter = 0;
 const getUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${uniqueIdCounter++}`;
+
+const HIGHLIGHTER_COLOR_MAP: Record<HighlighterColor, string> = {
+  yellow: '#facc15',
+  green: '#4ade80',
+  pink: '#f472b6',
+  blue: '#38bdf8',
+};
 
 interface AnnotationPageProps {
   isOpen: boolean;
@@ -44,14 +62,15 @@ export function AnnotationPage({
   onAnnotationsChange,
 }: AnnotationPageProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTool, setActiveTool] = useState<'select' | 'text' | 'pen' | 'check' | 'cross'>("select");
+  const [activeTool, setActiveTool] = useState<AnnotationToolType>("select");
   const [zoom, setZoom] = useState(1);
 
   const [textColor, setTextColor] = useState("#000000");
   const [fontSize, setFontSize] = useState(16);
   const [strokeColor, setStrokeColor] = useState("#ff0000");
   const [strokeWidth, setStrokeWidth] = useState(3);
-  
+  const [highlighterColor, setHighlighterColor] = useState<HighlighterColor>("yellow");
+
   const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
@@ -63,7 +82,6 @@ export function AnnotationPage({
   const drawingPathRef = useRef<{ x: number; y: number }[]>([]);
 
   const RENDER_SCALE = 2.5;
-  const isInitialMount = useRef(true);
 
   useEffect(() => {
     setAnnotations(initialAnnotations);
@@ -73,48 +91,47 @@ export function AnnotationPage({
     if (!isOpen) return;
     setIsLoading(true);
     try {
-        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-          pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-            'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
-            import.meta.url
-          ).toString();
-        }
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+          'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+          import.meta.url
+        ).toString();
+      }
 
-        const tempDoc = await pdfDoc.copy();
-        const pdfBytes = await tempDoc.save();
-        const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
-        const page = await pdfjsDoc.getPage(pageIndex + 1);
-        
-        const containerWidth = 800; 
-        const viewport = page.getViewport({ scale: 1 });
-        const scale = containerWidth / viewport.width;
-        const scaledViewport = page.getViewport({ scale: scale * RENDER_SCALE });
-        
-        setPageDimensions({
-          width: scaledViewport.width / RENDER_SCALE,
-          height: scaledViewport.height / RENDER_SCALE
-        });
+      const tempDoc = await pdfDoc.copy();
+      const pdfBytes = await tempDoc.save();
+      const pdfjsDoc = await pdfjs.getDocument({ data: pdfBytes }).promise;
+      const page = await pdfjsDoc.getPage(pageIndex + 1);
 
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.height = scaledViewport.height;
-        tempCanvas.width = scaledViewport.width;
-        const context = tempCanvas.getContext("2d");
+      const containerWidth = 800;
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = containerWidth / viewport.width;
+      const scaledViewport = page.getViewport({ scale: scale * RENDER_SCALE });
 
-        if (!context) {
-          setIsLoading(false);
-          return;
-        }
+      setPageDimensions({
+        width: scaledViewport.width / RENDER_SCALE,
+        height: scaledViewport.height / RENDER_SCALE,
+      });
 
-        const renderContext = {
-          canvasContext: context,
-          viewport: scaledViewport,
-        };
-        await page.render(renderContext).promise;
-        
-        const imageUrl = tempCanvas.toDataURL();
-        setPageImageUrl(imageUrl);
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.height = scaledViewport.height;
+      tempCanvas.width = scaledViewport.width;
+      const context = tempCanvas.getContext("2d");
 
+      if (!context) {
+        setIsLoading(false);
+        return;
+      }
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: scaledViewport,
+      };
+      await page.render(renderContext).promise;
+
+      const imageUrl = tempCanvas.toDataURL();
+      setPageImageUrl(imageUrl);
     } catch (e) {
       console.error("Failed to render page", e);
       toast({
@@ -134,10 +151,11 @@ export function AnnotationPage({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeElement = document.activeElement;
-      const isEditingText = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+      const isEditingText =
+        activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
 
       if ((e.key === 'Backspace' || e.key === 'Delete') && selectedAnnotationId && !isEditingText) {
-        e.preventDefault(); 
+        e.preventDefault();
         handleDeleteAnnotation(selectedAnnotationId);
       }
 
@@ -149,6 +167,9 @@ export function AnnotationPage({
         if (e.key === 'v' || e.key === 'V') setActiveTool('select');
         if (e.key === 't' || e.key === 'T') setActiveTool('text');
         if (e.key === 'p' || e.key === 'P') setActiveTool('pen');
+        if (e.key === 'h' || e.key === 'H') setActiveTool('highlighter');
+        if (e.key === 'b' || e.key === 'B') setActiveTool('blackout');
+        if (e.key === 'm' || e.key === 'M') setActiveTool('mask');
         if (e.key === 's' || e.key === 'S') {
           e.preventDefault();
           setIsSignatureModalOpen(true);
@@ -160,7 +181,7 @@ export function AnnotationPage({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedAnnotationId]);
-  
+
   const getCoordinates = (clientX: number, clientY: number, currentTarget: HTMLElement) => {
     const rect = currentTarget.getBoundingClientRect();
     const x = (clientX - rect.left) / zoom;
@@ -168,38 +189,87 @@ export function AnnotationPage({
     return { x, y };
   };
 
+  const isFreehandTool =
+    activeTool === 'pen' || activeTool === 'blackout' || activeTool === 'highlighter';
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (activeTool !== 'pen') return;
-      setIsDrawing(true);
-      const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
-      drawingPathRef.current = [{ x, y }];
+    if (!isFreehandTool) return;
+    setIsDrawing(true);
+    const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
+    drawingPathRef.current = [{ x, y }];
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isDrawing || activeTool !== 'pen') return;
-      const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
-      drawingPathRef.current.push({ x, y });
+    if (!isDrawing || !isFreehandTool) return;
+    const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
+    drawingPathRef.current.push({ x, y });
 
-      setAnnotations(prev => {
-          const existing = prev.find(a => a.id === 'temp-drawing');
-          if (existing && existing.type === 'drawing') {
-              return prev.map(a => a.id === 'temp-drawing' ? { ...a, paths: [drawingPathRef.current] } : a);
-          }
-          return [...prev, {
-            id: 'temp-drawing',
-            type: 'drawing',
-            paths: [drawingPathRef.current],
-            strokeColor,
-            strokeWidth,
-          }];
-      });
+    setAnnotations((prev) => {
+      const filtered = prev.filter((a) => a.id !== 'temp-freehand');
+
+      if (activeTool === 'highlighter') {
+        const tempHighlighter: HighlighterAnnotation = {
+          id: 'temp-freehand',
+          type: 'highlighter',
+          paths: [drawingPathRef.current],
+          color: highlighterColor,
+          strokeWidth: 24,
+          opacity: 0.35,
+        };
+        return [...filtered, tempHighlighter];
+      }
+
+      if (activeTool === 'blackout') {
+        const tempBlackout: BlackoutMarkerAnnotation = {
+          id: 'temp-freehand',
+          type: 'blackout',
+          paths: [drawingPathRef.current],
+          strokeWidth: 16,
+        };
+        return [...filtered, tempBlackout];
+      }
+
+      const tempDrawing: DrawingAnnotation = {
+        id: 'temp-freehand',
+        type: 'drawing',
+        paths: [drawingPathRef.current],
+        strokeColor,
+        strokeWidth,
+      };
+      return [...filtered, tempDrawing];
+    });
   };
 
   const handleMouseUp = () => {
-      if (!isDrawing || activeTool !== 'pen') return;
-      setIsDrawing(false);
+    if (!isDrawing || !isFreehandTool) return;
+    setIsDrawing(false);
 
-      if (drawingPathRef.current.length > 0) {
+    if (drawingPathRef.current.length > 0) {
+      if (activeTool === 'highlighter') {
+        const finalHighlighter: HighlighterAnnotation = {
+          id: getUniqueId('highlighter'),
+          type: 'highlighter',
+          paths: [drawingPathRef.current],
+          color: highlighterColor,
+          strokeWidth: 24,
+          opacity: 0.35,
+        };
+        setAnnotations((prev) => [
+          ...prev.filter((a) => a.id !== 'temp-freehand'),
+          finalHighlighter,
+        ]);
+      } else if (activeTool === 'blackout') {
+        const finalBlackout: BlackoutMarkerAnnotation = {
+          id: getUniqueId('blackout'),
+          type: 'blackout',
+          paths: [drawingPathRef.current],
+          strokeWidth: 16,
+        };
+        setAnnotations((prev) => [
+          ...prev.filter((a) => a.id !== 'temp-freehand'),
+          finalBlackout,
+        ]);
+      } else {
         const finalAnnotation: DrawingAnnotation = {
           id: getUniqueId('drawing'),
           type: 'drawing',
@@ -207,18 +277,18 @@ export function AnnotationPage({
           strokeColor,
           strokeWidth,
         };
-
-        setAnnotations(prev => [
-            ...prev.filter(a => a.id !== 'temp-drawing'),
-            finalAnnotation
+        setAnnotations((prev) => [
+          ...prev.filter((a) => a.id !== 'temp-freehand'),
+          finalAnnotation,
         ]);
       }
-      drawingPathRef.current = [];
+    }
+    drawingPathRef.current = [];
   };
 
   // Touch drawing handlers
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (activeTool !== 'pen') return;
+    if (!isFreehandTool) return;
     setIsDrawing(true);
     const touch = e.touches[0];
     const { x, y } = getCoordinates(touch.clientX, touch.clientY, e.currentTarget);
@@ -226,23 +296,47 @@ export function AnnotationPage({
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isDrawing || activeTool !== 'pen') return;
+    if (!isDrawing || !isFreehandTool) return;
     const touch = e.touches[0];
     const { x, y } = getCoordinates(touch.clientX, touch.clientY, e.currentTarget);
     drawingPathRef.current.push({ x, y });
 
-    setAnnotations(prev => {
-        const existing = prev.find(a => a.id === 'temp-drawing');
-        if (existing && existing.type === 'drawing') {
-            return prev.map(a => a.id === 'temp-drawing' ? { ...a, paths: [drawingPathRef.current] } : a);
-        }
-        return [...prev, {
-          id: 'temp-drawing',
+    setAnnotations((prev) => {
+      const filtered = prev.filter((a) => a.id !== 'temp-freehand');
+      if (activeTool === 'highlighter') {
+        return [
+          ...filtered,
+          {
+            id: 'temp-freehand',
+            type: 'highlighter',
+            paths: [drawingPathRef.current],
+            color: highlighterColor,
+            strokeWidth: 24,
+            opacity: 0.35,
+          },
+        ];
+      }
+      if (activeTool === 'blackout') {
+        return [
+          ...filtered,
+          {
+            id: 'temp-freehand',
+            type: 'blackout',
+            paths: [drawingPathRef.current],
+            strokeWidth: 16,
+          },
+        ];
+      }
+      return [
+        ...filtered,
+        {
+          id: 'temp-freehand',
           type: 'drawing',
           paths: [drawingPathRef.current],
           strokeColor,
           strokeWidth,
-        }];
+        },
+      ];
     });
   };
 
@@ -250,51 +344,72 @@ export function AnnotationPage({
     const target = e.target as HTMLElement;
 
     if (target.id === 'annotation-container' && selectedAnnotationId) {
-        setSelectedAnnotationId(null);
+      setSelectedAnnotationId(null);
     }
-    
+
     if (e.target !== e.currentTarget) return;
 
     if (activeTool === 'text') {
-        const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
-        addTextAnnotation(x, y);
+      const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
+      addTextAnnotation(x, y);
     } else if (activeTool === 'check' || activeTool === 'cross') {
-        const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
-        addIconAnnotation(x, y, activeTool);
+      const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
+      addIconAnnotation(x, y, activeTool);
+    } else if (activeTool === 'mask') {
+      const { x, y } = getCoordinates(e.clientX, e.clientY, e.currentTarget);
+      addMaskAnnotation(x, y);
     }
   };
-  
+
   const addTextAnnotation = (x: number, y: number) => {
     const newAnnotation: TextAnnotation = {
-        id: getUniqueId('text'),
-        type: 'text',
-        x,
-        y,
-        text: 'Type here...',
-        fontSize,
-        fontColor: textColor,
-        width: 160,
-        height: 40,
-        isEditing: true,
+      id: getUniqueId('text'),
+      type: 'text',
+      x,
+      y,
+      text: 'Type here...',
+      fontSize,
+      fontColor: textColor,
+      width: 160,
+      height: 40,
+      isEditing: true,
     };
-    setAnnotations(prev => [...prev, newAnnotation]);
+    setAnnotations((prev) => [...prev, newAnnotation]);
     setSelectedAnnotationId(newAnnotation.id);
   };
-  
+
   const addIconAnnotation = (x: number, y: number, iconType: 'check' | 'cross') => {
     const newAnnotation: IconAnnotation = {
-        id: getUniqueId(iconType),
-        type: 'icon',
-        iconType,
-        x,
-        y,
-        size: 50,
-        strokeColor,
-        strokeWidth,
+      id: getUniqueId(iconType),
+      type: 'icon',
+      iconType,
+      x,
+      y,
+      size: 50,
+      strokeColor,
+      strokeWidth,
     };
-    setAnnotations(prev => [...prev, newAnnotation]);
+    setAnnotations((prev) => [...prev, newAnnotation]);
     setSelectedAnnotationId(newAnnotation.id);
     setActiveTool('select');
+  };
+
+  const addMaskAnnotation = (x: number, y: number) => {
+    const newAnnotation: RedactionMaskAnnotation = {
+      id: getUniqueId('mask'),
+      type: 'mask',
+      x: Math.max(0, x - 80),
+      y: Math.max(0, y - 25),
+      width: 160,
+      height: 50,
+    };
+    setAnnotations((prev) => [...prev, newAnnotation]);
+    setSelectedAnnotationId(newAnnotation.id);
+    setActiveTool('select');
+    toast({
+      title: "Redaction Mask Added",
+      description: "Drag to reposition or use the corner handle to resize.",
+    });
   };
 
   const handleAddSignatureFromToolbar = (signatureDataUrl: string) => {
@@ -313,7 +428,7 @@ export function AnnotationPage({
       dataUrl: signatureDataUrl,
     };
 
-    setAnnotations(prev => [...prev, newAnnotation]);
+    setAnnotations((prev) => [...prev, newAnnotation]);
     setSelectedAnnotationId(newAnnotation.id);
     setActiveTool('select');
 
@@ -322,41 +437,56 @@ export function AnnotationPage({
       description: "You can drag to move or use the corner handle to resize.",
     });
   };
-  
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, delta } = event;
     const draggedId = active.id as string;
-    
-    setAnnotations(prev => 
-        prev.map(ann => {
-            if (ann.id === draggedId) {
-                if (ann.type === 'text' || ann.type === 'icon' || ann.type === 'signature') {
-                    return {
-                        ...ann,
-                        x: ann.x + delta.x / zoom,
-                        y: ann.y + delta.y / zoom,
-                    }
-                }
-            }
-            return ann;
-        })
+
+    setAnnotations((prev) =>
+      prev.map((ann) => {
+        if (ann.id === draggedId) {
+          if (
+            ann.type === 'text' ||
+            ann.type === 'icon' ||
+            ann.type === 'signature' ||
+            ann.type === 'mask'
+          ) {
+            return {
+              ...ann,
+              x: ann.x + delta.x / zoom,
+              y: ann.y + delta.y / zoom,
+            };
+          }
+        }
+        return ann;
+      })
     );
   };
-  
+
   const handleDeleteAnnotation = (idToDelete: string) => {
-    setAnnotations(prev => prev.filter(ann => ann.id !== idToDelete));
+    setAnnotations((prev) => prev.filter((ann) => ann.id !== idToDelete));
     setSelectedAnnotationId(null);
   };
 
   const handleUpdateTextAnnotation = (id: string, newText: string) => {
-    setAnnotations(prev =>
-      prev.map(ann => (ann.id === id && ann.type === 'text' ? { ...ann, text: newText } : ann))
+    setAnnotations((prev) =>
+      prev.map((ann) =>
+        ann.id === id && ann.type === 'text' ? { ...ann, text: newText } : ann
+      )
     );
   };
 
-  const handleUpdateAnnotationSize = (id: string, newSize: { width: number, height: number}) => {
-    setAnnotations(prev =>
-      prev.map(ann => (ann.id === id && (ann.type === 'text' || ann.type === 'signature') ? { ...ann, ...newSize } : ann))
+  const handleUpdateAnnotationSize = (
+    id: string,
+    newSize: { width: number; height: number }
+  ) => {
+    setAnnotations((prev) =>
+      prev.map((ann) =>
+        ann.id === id &&
+        (ann.type === 'text' || ann.type === 'signature' || ann.type === 'mask')
+          ? { ...ann, ...newSize }
+          : ann
+      )
     );
   };
 
@@ -370,8 +500,13 @@ export function AnnotationPage({
     });
   };
 
-  const getDrawingBBox = (annotation: DrawingAnnotation) => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const getDrawingBBox = (
+    annotation: DrawingAnnotation | BlackoutMarkerAnnotation | HighlighterAnnotation
+  ) => {
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const path of annotation.paths) {
       for (const pt of path) {
         minX = Math.min(minX, pt.x);
@@ -384,8 +519,7 @@ export function AnnotationPage({
   };
 
   const handleSave = () => {
-    // Filter out temporary drawing paths if any
-    const cleanAnnotations = annotations.filter(a => a.id !== 'temp-drawing');
+    const cleanAnnotations = annotations.filter((a) => a.id !== 'temp-freehand');
     onSave(cleanAnnotations);
     onClose();
   };
@@ -399,7 +533,12 @@ export function AnnotationPage({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCancel();
+        }}
+      >
         <DialogContent className="max-w-7xl h-[95vh] flex flex-col p-6 rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl font-bold">
@@ -419,9 +558,13 @@ export function AnnotationPage({
               setStrokeColor={setStrokeColor}
               strokeWidth={strokeWidth}
               setStrokeWidth={setStrokeWidth}
+              highlighterColor={highlighterColor}
+              setHighlighterColor={setHighlighterColor}
               zoom={zoom}
               setZoom={setZoom}
-              onDelete={() => selectedAnnotationId && handleDeleteAnnotation(selectedAnnotationId)}
+              onDelete={() =>
+                selectedAnnotationId && handleDeleteAnnotation(selectedAnnotationId)
+              }
               hasSelection={!!selectedAnnotationId}
               onClearAll={annotations.length > 0 ? handleClearAll : undefined}
               onAddSignature={() => setIsSignatureModalOpen(true)}
@@ -442,132 +585,233 @@ export function AnnotationPage({
                     transformOrigin: 'top left',
                   }}
                 >
-                    <div
-                      id="annotation-container"
-                      className="absolute inset-0 select-none"
+                  <div
+                    id="annotation-container"
+                    className="absolute inset-0 select-none"
+                    style={{
+                      width: pageDimensions.width,
+                      height: pageDimensions.height,
+                      cursor: isFreehandTool
+                        ? 'crosshair'
+                        : activeTool === 'mask'
+                        ? 'copy'
+                        : 'default',
+                      touchAction: isFreehandTool ? 'none' : 'auto',
+                    }}
+                    onClick={handleContainerClick}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleMouseUp}
+                  >
+                    {pageImageUrl ? (
+                      <img
+                        src={pageImageUrl}
+                        alt={`Page ${pageIndex + 1}`}
+                        style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+                        draggable={false}
+                      />
+                    ) : (
+                      !isLoading && (
+                        <div className="w-full h-full flex items-center justify-center text-destructive-foreground">
+                          Failed to load page preview.
+                        </div>
+                      )
+                    )}
+
+                    {/* SVG Layer 1: Fluorescent Highlighters (Multiply blend mode) */}
+                    <svg
+                      className={cn(
+                        "absolute top-0 left-0 w-full h-full pointer-events-none",
+                        activeTool === 'select' && "pointer-events-auto"
+                      )}
                       style={{
                         width: pageDimensions.width,
                         height: pageDimensions.height,
-                        cursor: activeTool === 'pen' ? 'crosshair' : 'default',
-                        touchAction: activeTool === 'pen' ? 'none' : 'auto',
+                        mixBlendMode: 'multiply',
                       }}
-                      onClick={handleContainerClick}
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseUp}
-                      onTouchStart={handleTouchStart}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleMouseUp}
                     >
-                      {pageImageUrl ? (
-                          <img
-                            src={pageImageUrl}
-                            alt={`Page ${pageIndex + 1}`}
-                            style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
-                            draggable={false}
-                          />
-                      ) : !isLoading && (
-                          <div className="w-full h-full flex items-center justify-center text-destructive-foreground">Failed to load page preview.</div>
-                      )}
-                       <svg
-                          className={cn(
-                            "absolute top-0 left-0 w-full h-full",
-                            activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"
-                          )}
-                          style={{ width: pageDimensions.width, height: pageDimensions.height }}
-                       >
-                          {annotations.map(annotation => {
-                              if (annotation.type !== 'drawing') return null;
-                              const isSelected = annotation.id === selectedAnnotationId;
-                              return (
-                                  <g
-                                    key={annotation.id}
-                                    className={cn(activeTool === 'select' && "cursor-pointer")}
-                                    onClick={(e) => {
-                                      if (activeTool === 'select') {
-                                        e.stopPropagation();
-                                        setSelectedAnnotationId(annotation.id);
-                                      }
-                                    }}
-                                  >
-                                  {annotation.paths.map((path, pIndex) => (
-                                      <polyline
-                                          key={pIndex}
-                                          points={path.map(p => `${p.x},${p.y}`).join(' ')}
-                                          fill="none"
-                                          stroke={isSelected ? "#2563eb" : annotation.strokeColor}
-                                          strokeWidth={isSelected ? annotation.strokeWidth + 2 : annotation.strokeWidth}
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          opacity={isSelected ? 0.9 : 1}
-                                      />
-                                  ))}
-                                  </g>
-                              );
-                          })}
-                       </svg>
-                    </div>
-                  
-                  {annotations.map(annotation => {
-                      if (annotation.type === 'text') {
-                          return <DraggableAnnotation 
-                                      key={annotation.id}
-                                      annotation={annotation}
-                                      isSelected={annotation.id === selectedAnnotationId}
-                                      onSelect={() => setSelectedAnnotationId(annotation.id)}
-                                      onDelete={() => handleDeleteAnnotation(annotation.id)}
-                                      onTextChange={(newText) => handleUpdateTextAnnotation(annotation.id, newText)}
-                                      onResizeStop={(size) => handleUpdateAnnotationSize(annotation.id, size)}
-                                  />;
-                      }
-                      if (annotation.type === 'icon') {
-                          return <DraggableIconAnnotation
-                                      key={annotation.id}
-                                      annotation={annotation}
-                                      isSelected={annotation.id === selectedAnnotationId}
-                                      onSelect={() => setSelectedAnnotationId(annotation.id)}
-                                      onDelete={() => handleDeleteAnnotation(annotation.id)}
-                                  />;
-                      }
-                      if (annotation.type === 'signature') {
-                          return <DraggableSignatureAnnotation
-                                      key={annotation.id}
-                                      annotation={annotation}
-                                      isSelected={annotation.id === selectedAnnotationId}
-                                      onSelect={() => setSelectedAnnotationId(annotation.id)}
-                                      onDelete={() => handleDeleteAnnotation(annotation.id)}
-                                      onResizeStop={(size) => handleUpdateAnnotationSize(annotation.id, size)}
-                                  />;
-                      }
-                      if (annotation.type === 'drawing' && annotation.id === selectedAnnotationId) {
-                        const bbox = getDrawingBBox(annotation);
-                        if (bbox.minX === Infinity) return null;
+                      {annotations.map((annotation) => {
+                        if (annotation.type !== 'highlighter') return null;
+                        const isSelected = annotation.id === selectedAnnotationId;
+                        const fluoHex = HIGHLIGHTER_COLOR_MAP[annotation.color] || '#facc15';
+
                         return (
-                          <div
-                            key={`del-${annotation.id}`}
-                            className="absolute z-30 pointer-events-auto"
-                            style={{
-                              left: `${Math.min(pageDimensions.width - 28, bbox.maxX + 4)}px`,
-                              top: `${Math.max(4, bbox.minY - 14)}px`,
+                          <g
+                            key={annotation.id}
+                            className={cn(activeTool === 'select' && "cursor-pointer")}
+                            onClick={(e) => {
+                              if (activeTool === 'select') {
+                                e.stopPropagation();
+                                setSelectedAnnotationId(annotation.id);
+                              }
                             }}
                           >
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="h-6 w-6 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAnnotation(annotation.id);
-                              }}
-                              title="Delete drawing"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                            {annotation.paths.map((path, pIndex) => (
+                              <polyline
+                                key={pIndex}
+                                points={path.map((p) => `${p.x},${p.y}`).join(' ')}
+                                fill="none"
+                                stroke={isSelected ? '#2563eb' : fluoHex}
+                                strokeWidth={annotation.strokeWidth || 24}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity={isSelected ? 0.7 : annotation.opacity || 0.35}
+                              />
+                            ))}
+                          </g>
                         );
-                      }
-                      return null;
+                      })}
+                    </svg>
+
+                    {/* SVG Layer 2: Standard Drawings & Solid Blackout Markers */}
+                    <svg
+                      className={cn(
+                        "absolute top-0 left-0 w-full h-full pointer-events-none",
+                        activeTool === 'select' && "pointer-events-auto"
+                      )}
+                      style={{
+                        width: pageDimensions.width,
+                        height: pageDimensions.height,
+                      }}
+                    >
+                      {annotations.map((annotation) => {
+                        if (annotation.type !== 'drawing' && annotation.type !== 'blackout')
+                          return null;
+                        const isSelected = annotation.id === selectedAnnotationId;
+                        const isBlackout = annotation.type === 'blackout';
+                        const stroke = isSelected
+                          ? '#2563eb'
+                          : isBlackout
+                          ? '#000000'
+                          : annotation.strokeColor;
+                        const width = isBlackout
+                          ? annotation.strokeWidth || 16
+                          : annotation.strokeWidth;
+
+                        return (
+                          <g
+                            key={annotation.id}
+                            className={cn(activeTool === 'select' && "cursor-pointer")}
+                            onClick={(e) => {
+                              if (activeTool === 'select') {
+                                e.stopPropagation();
+                                setSelectedAnnotationId(annotation.id);
+                              }
+                            }}
+                          >
+                            {annotation.paths.map((path, pIndex) => (
+                              <polyline
+                                key={pIndex}
+                                points={path.map((p) => `${p.x},${p.y}`).join(' ')}
+                                fill="none"
+                                stroke={stroke}
+                                strokeWidth={isSelected ? width + 2 : width}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity={1}
+                              />
+                            ))}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+
+                  {/* HTML/React Draggable & Resizable Elements */}
+                  {annotations.map((annotation) => {
+                    if (annotation.type === 'text') {
+                      return (
+                        <DraggableAnnotation
+                          key={annotation.id}
+                          annotation={annotation}
+                          isSelected={annotation.id === selectedAnnotationId}
+                          onSelect={() => setSelectedAnnotationId(annotation.id)}
+                          onDelete={() => handleDeleteAnnotation(annotation.id)}
+                          onTextChange={(newText) =>
+                            handleUpdateTextAnnotation(annotation.id, newText)
+                          }
+                          onResizeStop={(size) =>
+                            handleUpdateAnnotationSize(annotation.id, size)
+                          }
+                        />
+                      );
+                    }
+                    if (annotation.type === 'icon') {
+                      return (
+                        <DraggableIconAnnotation
+                          key={annotation.id}
+                          annotation={annotation}
+                          isSelected={annotation.id === selectedAnnotationId}
+                          onSelect={() => setSelectedAnnotationId(annotation.id)}
+                          onDelete={() => handleDeleteAnnotation(annotation.id)}
+                        />
+                      );
+                    }
+                    if (annotation.type === 'signature') {
+                      return (
+                        <DraggableSignatureAnnotation
+                          key={annotation.id}
+                          annotation={annotation}
+                          isSelected={annotation.id === selectedAnnotationId}
+                          onSelect={() => setSelectedAnnotationId(annotation.id)}
+                          onDelete={() => handleDeleteAnnotation(annotation.id)}
+                          onResizeStop={(size) =>
+                            handleUpdateAnnotationSize(annotation.id, size)
+                          }
+                        />
+                      );
+                    }
+                    if (annotation.type === 'mask') {
+                      return (
+                        <DraggableMaskAnnotation
+                          key={annotation.id}
+                          annotation={annotation}
+                          isSelected={annotation.id === selectedAnnotationId}
+                          onSelect={() => setSelectedAnnotationId(annotation.id)}
+                          onDelete={() => handleDeleteAnnotation(annotation.id)}
+                          onResizeStop={(size) =>
+                            handleUpdateAnnotationSize(annotation.id, size)
+                          }
+                        />
+                      );
+                    }
+                    if (
+                      (annotation.type === 'drawing' ||
+                        annotation.type === 'blackout' ||
+                        annotation.type === 'highlighter') &&
+                      annotation.id === selectedAnnotationId
+                    ) {
+                      const bbox = getDrawingBBox(annotation);
+                      if (bbox.minX === Infinity) return null;
+                      return (
+                        <div
+                          key={`del-${annotation.id}`}
+                          className="absolute z-40 pointer-events-auto"
+                          style={{
+                            left: `${Math.min(pageDimensions.width - 28, bbox.maxX + 4)}px`,
+                            top: `${Math.max(4, bbox.minY - 14)}px`,
+                          }}
+                        >
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-6 w-6 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAnnotation(annotation.id);
+                            }}
+                            title="Delete stroke"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    }
+                    return null;
                   })}
                 </div>
               </DndContext>

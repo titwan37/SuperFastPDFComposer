@@ -24,7 +24,8 @@ import { TargetDocumentPanel } from "./composer/target-document-panel";
 import { usePdfComposerState, getUniqueId } from "@/hooks/use-pdf-composer-state";
 import { usePdfOptimizer } from "@/hooks/use-pdf-optimizer";
 import { downloadBlob } from "@/services/client-pdf-optimizer.service";
-import { applyAnnotationsToPdfPage } from "@/lib/pdf-annotation-renderer";
+import { applyNativeAnnotationsToPdfPage } from "@/lib/pdf-annotation-renderer";
+import { generateOCGDictionary, DEFAULT_PDF_LAYERS } from "@/services/pdf-layer-manager";
 import { exportTargetPagesToWord } from "@/services/docx-exporter.service";
 
 const OPTIMIZATION_THRESHOLD_BYTES = 6 * 1024 * 1024; // 6MB
@@ -175,6 +176,8 @@ export function PdfComposer({
     setLoadingMessage("Composing PDF...");
     try {
       const newPdfDoc = await PDFDocument.create();
+      const ocgMap = generateOCGDictionary(newPdfDoc, DEFAULT_PDF_LAYERS);
+
       for (const targetPage of targetPages) {
         const sourceDocData = sourceDocs[targetPage.docId];
         if (sourceDocData?.doc) {
@@ -183,10 +186,11 @@ export function PdfComposer({
           ]);
 
           if (targetPage.annotations && targetPage.annotations.length > 0) {
-            await applyAnnotationsToPdfPage(
+            await applyNativeAnnotationsToPdfPage(
               copiedPage,
               targetPage.annotations,
-              newPdfDoc
+              newPdfDoc,
+              ocgMap
             );
           }
 
@@ -610,6 +614,9 @@ export function PdfComposer({
             onDeleteTargetPage={deleteTargetPage}
             onPreviewClick={(docId, pageIndex, targetPageId) =>
               handlePreviewClick(docId, pageIndex, targetPageId)
+            }
+            onAnnotateClick={(docId, pageIndex, targetPageId) =>
+              openAnnotationPage(targetPageId, docId, pageIndex)
             }
             onTargetFileUpload={handleTargetFileUpload}
           />

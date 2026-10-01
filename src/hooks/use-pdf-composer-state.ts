@@ -31,6 +31,7 @@ export function usePdfComposerState({
 
   const [targetPages, setTargetPages] = useState<TargetPage[]>([]);
   const [targetThumbnailScale, setTargetThumbnailScale] = useState(1);
+  const [engineMode, setEngineMode] = useState<'native-pdf-lib' | 'wasm-mupdf'>('native-pdf-lib');
 
   const renderPdfPage = async (
     pdfDocProxy: PDFDocumentProxy,
@@ -408,5 +409,7 @@ export function usePdfComposerState({
     addPageToTarget,
     addAllPagesFromSource,
     handleUpdateTargetPageAnnotations,
+    engineMode,
+    setEngineMode,
   };
 }

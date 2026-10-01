@@ -37,6 +37,7 @@ interface TargetDocumentPanelProps {
   onClearTargetPages: () => void;
   onDeleteTargetPage: (id: string) => void;
   onPreviewClick: (docId: string, pageIndex: number, targetPageId: string) => void;
+  onAnnotateClick?: (docId: string, pageIndex: number, targetPageId: string) => void;
   onTargetFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -52,6 +53,7 @@ export function TargetDocumentPanel({
   onClearTargetPages,
   onDeleteTargetPage,
   onPreviewClick,
+  onAnnotateClick,
   onTargetFileUpload,
 }: TargetDocumentPanelProps) {
   const targetFileInputRef = useRef<HTMLInputElement>(null);
@@ -201,6 +203,13 @@ export function TargetDocumentPanel({
                       onDelete={onDeleteTargetPage}
                       onPreview={() =>
                         onPreviewClick(
+                          page.docId,
+                          page.originalPageIndex,
+                          page.id
+                        )
+                      }
+                      onAnnotate={() =>
+                        onAnnotateClick?.(
                           page.docId,
                           page.originalPageIndex,
                           page.id

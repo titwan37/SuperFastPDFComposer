@@ -3,7 +3,7 @@
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2, GripVertical, Eye, FileSignature } from "lucide-react";
+import { Trash2, GripVertical, Eye, FileSignature, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -19,6 +19,7 @@ interface SortableTargetPageProps {
   thumbnailUrl?: string | null;
   onDelete: (id: string) => void;
   onPreview: () => void;
+  onAnnotate?: () => void;
   annotations?: Annotation[];
 }
 
@@ -28,6 +29,7 @@ export function SortableTargetPage({
   thumbnailUrl,
   onDelete,
   onPreview,
+  onAnnotate,
   annotations = [],
 }: SortableTargetPageProps) {
   const {
@@ -65,7 +67,7 @@ export function SortableTargetPage({
         >
           <GripVertical className="h-5 w-5" />
         </div>
-        <div className="absolute right-1 top-1 flex flex-col gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="absolute right-1 top-1 flex flex-col gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 z-20">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -82,6 +84,26 @@ export function SortableTargetPage({
               <p>Delete page</p>
             </TooltipContent>
           </Tooltip>
+
+          {onAnnotate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-7 w-7 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                  onClick={onAnnotate}
+                  aria-label="Annotate page"
+                >
+                  <FileEdit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Annotate (Highlighter, Blackout, Mask, Text)</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -95,7 +117,7 @@ export function SortableTargetPage({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="left">
-              <p>View &amp; Edit</p>
+              <p>Preview Page</p>
             </TooltipContent>
           </Tooltip>
         </div>
